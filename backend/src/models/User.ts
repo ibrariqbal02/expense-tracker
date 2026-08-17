@@ -5,6 +5,10 @@ const userSchema = new mongoose.Schema({
   email: { type: String, require: true, unique: true },
   password: { type: String, require: true },
   profileUrl: { type: String, default: "" },
+  refreshToken: {
+      type: String,
+      default: "",
+    },
 },{timestamps:true}); // auto add created at and updated at
 
 export const User = mongoose.model('User', userSchema)
