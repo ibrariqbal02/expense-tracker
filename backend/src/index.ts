@@ -2,7 +2,7 @@ import express, { Application } from "express";
 
 import dotenv from "dotenv";
 import connectDb from "./config/database";
-
+import authRouter from "./routes/auth.routes";
 dotenv.config();
 
 
@@ -15,7 +15,7 @@ const PORT: number = Number(process.env.PORT) || 4000;
 app.use(express.json());
 
 // Routes 
-
+app.use('/api/auth', authRouter)
 
 
 
