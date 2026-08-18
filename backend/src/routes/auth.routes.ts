@@ -1,0 +1,15 @@
+import { Router } from "express";
+import { login, logout, refreshToken, register } from "../controllers/auth.controller";
+import { isAuthenticated } from "../middlewares/auth.middleware";
+
+
+
+
+const authRouter = Router()
+
+authRouter.post('/register', register)
+authRouter.post('/login', login)
+authRouter.get('/logout',isAuthenticated,logout)
+authRouter.post("/refresh", refreshToken);
+
+export default authRouter
