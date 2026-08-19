@@ -10,21 +10,6 @@ import {
   generateRefreshToken,
 } from "../utils/generateToken";
 
-const isProduction = process.env.NODE_ENV === "production";
-
-// In production the frontend is on a different origin, so the cookie needs
-// secure + sameSite=none to be sent cross-site. Locally that combination
-// gets silently dropped by the browser (secure cookies require HTTPS), so
-// fall back to sameSite=lax over plain http.
-const cookieOptions = {
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
-};
-
-const ACCESS_TOKEN_MAX_AGE = 15 * 60 * 1000; // 15 minutes — matches generateAccessToken's expiresIn
-const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days — matches generateRefreshToken's expiresIn
-
 export const register = async (req: Request, res: Response) => {
   try {
     const { name, email, password } = req.body;
@@ -53,27 +38,17 @@ export const register = async (req: Request, res: Response) => {
       password: hashedPassword,
     });
 
-    const accessToken = generateAccessToken(user._id.toString());
-    const refreshToken = generateRefreshToken(user._id.toString());
-    user.refreshToken = refreshToken;
-    await user.save();
+    const userResponse = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      password: user.password,
+    };
 
-    res.cookie("accessToken", accessToken, {
-      ...cookieOptions,
-      maxAge: ACCESS_TOKEN_MAX_AGE,
-    });
-
-    res.cookie("refreshToken", refreshToken, {
-      ...cookieOptions,
-      maxAge: REFRESH_TOKEN_MAX_AGE,
-    });
-    const userData = user.toObject();
-
-    const { password: _, refreshToken: __, ...safeUser } = userData;
     return res.status(201).json({
       success: true,
-      message: "user create successfully",
-      user: safeUser,
+      message: "User registered successfully.",
+      user: userResponse,
     });
   } catch (error) {
     console.error("Register error:", error);
@@ -125,24 +100,16 @@ export const login = async (req: Request, res: Response) => {
     user.refreshToken = refreshToken;
     await user.save();
 
-    res.cookie("accessToken", accessToken, {
-      ...cookieOptions,
-      maxAge: ACCESS_TOKEN_MAX_AGE,
-    });
-
-    res.cookie("refreshToken", refreshToken, {
-      ...cookieOptions,
-      maxAge: REFRESH_TOKEN_MAX_AGE,
-    });
-
-    const userObject = user.toObject();
-
-    const { password: _, refreshToken: __, ...userData } = userObject;
-
     return res.status(200).json({
       success: true,
       message: "Login successful.",
-      user: userData,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      },
+      accessToken,
+      refreshToken,
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -155,7 +122,20 @@ export const login = async (req: Request, res: Response) => {
 };
 export const logout = async (req: Request, res: Response) => {
   try {
-    const user = await User.findById(req.userId);
+    const userId = req.userId;
+console.log(userId)
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: User identification missing.",
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $unset: { refreshToken: 1 } },
+      { new: true }
+    );
 
     if (!user) {
       return res.status(404).json({
@@ -164,81 +144,68 @@ export const logout = async (req: Request, res: Response) => {
       });
     }
 
-    user.refreshToken = "";
-
-    await user.save();
-
-    res.clearCookie("accessToken", cookieOptions);
-
-    res.clearCookie("refreshToken", cookieOptions);
-
     return res.status(200).json({
       success: true,
-      message: "Logout successful.",
+      message: "Logged out successfully.",
     });
   } catch (error) {
-    console.error(error);
+    console.error("Logout error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Internal Server Error",
+      message: "Internal Server Error during logout.",
     });
   }
 };
 
 export const refreshToken = async (req: Request, res: Response) => {
   try {
-    const { refreshToken } = req.cookies;
+    const { refreshToken } = req.body;
 
     if (!refreshToken) {
-      return res.status(401).json({
+      return res.status(400).json({
         success: false,
-        message: "Refresh token not found.",
+        message: "Refresh token is required.",
       });
     }
 
     const decoded = jwt.verify(
       refreshToken,
       process.env.JWT_REFRESH_SECRET as string
-    ) as { userId: string };
+    ) as jwt.JwtPayload;
 
     const user = await User.findById(decoded.userId);
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found.",
-      });
-    }
-
-    if (user.refreshToken !== refreshToken) {
       return res.status(401).json({
         success: false,
         message: "Invalid refresh token.",
       });
     }
 
-    const newAccessToken = generateAccessToken(user._id.toString());
+    if (user.refreshToken !== refreshToken) {
+      return res.status(401).json({
+        success: false,
+        message: "Refresh token is invalid or revoked.",
+      });
+    }
 
-    res.cookie("accessToken", newAccessToken, {
-      ...cookieOptions,
-      maxAge: ACCESS_TOKEN_MAX_AGE,
-    });
+    const newAccessToken = generateAccessToken(user._id.toString());
 
     return res.status(200).json({
       success: true,
       message: "Access token refreshed successfully.",
+      accessToken: newAccessToken,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Refresh token error:", error);
 
     return res.status(401).json({
       success: false,
-      message: "Invalid or Expired Refresh Token.",
+      message: "Invalid or expired refresh token.",
     });
   }
 };
-
 export const updatePassword = async (req: Request, res: Response) => {
   try {
     if (!req.userId) {
@@ -282,6 +249,7 @@ export const updatePassword = async (req: Request, res: Response) => {
 
     user.password = hashedPassword;
 
+
     user.refreshToken = "";
 
     await user.save();
@@ -299,3 +267,4 @@ export const updatePassword = async (req: Request, res: Response) => {
     });
   }
 };
+

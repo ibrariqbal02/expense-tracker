@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { createExpense, deleteExpense, getExpenses, updateExpense } from "../controllers/expense.controller";
-import isAuthenticated  from "../middlewares/auth.middleware";
+import { isAuthenticated } from "../middlewares/auth.middleware";
 
 
 const expenseRouter = Router()

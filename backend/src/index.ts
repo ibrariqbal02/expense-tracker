@@ -6,8 +6,6 @@ import authRouter from "./routes/auth.routes";
 import profileRouter from "./routes/profile.routes";
 import expenseRouter from "./routes/expense.routes";
 import categoryRoutes from "./routes/category.routes";
-import cookieParser from "cookie-parser";
-import cors from "cors";
 dotenv.config();
 
 const app: Application = express();
@@ -15,14 +13,7 @@ connectDb();
 const PORT: number = Number(process.env.PORT) || 4000;
 
 //meddleware
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
-    credentials: true,
-  })
-);
 app.use(express.json());
-app.use(cookieParser());
 
 // Routes
 app.use("/api/auth", authRouter);
