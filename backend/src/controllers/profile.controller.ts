@@ -68,15 +68,17 @@ export const updateProfile = async (req: Request, res: Response) => {
       message: "Profile updated successfully",
       user: updatedUser,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Update profile error:", error);
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : error?.message || error?.error?.message || "Internal Server Error";
 
     return res.status(500).json({
       success: false,
-      message:
-        error instanceof Error
-          ? error.message
-          : "Internal Server Error",
+      message,
     });
   }
 };
