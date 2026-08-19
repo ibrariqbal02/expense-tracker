@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import { Expense } from "../models/Expense";
+import mongoose from "mongoose";
+import { Category } from "../models/Category";
 
 export const createExpense = async (req: Request, res: Response) => {
   try {
@@ -10,7 +12,14 @@ export const createExpense = async (req: Request, res: Response) => {
       });
     }
 
-    const { title, amount, category, date, description, receiptUrl } = req.body;
+    const {
+      title,
+      amount,
+      category,
+      date,
+      description,
+      receiptUrl,
+    } = req.body;
 
     if (!title || amount === undefined || !category) {
       return res.status(400).json({
@@ -23,6 +32,25 @@ export const createExpense = async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         message: "Amount must be greater than 0.",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(category)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid category ID.",
+      });
+    }
+
+    const categoryExists = await Category.findOne({
+      _id: category,
+      user: req.userId,
+    });
+
+    if (!categoryExists) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found.",
       });
     }
 
