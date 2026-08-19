@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { login, logout, refreshToken, register, updatePassword } from "../controllers/auth.controller";
-import { isAuthenticated } from "../middlewares/auth.middleware";
+import isAuthenticated from "../middlewares/auth.middleware";
+
 
 
 

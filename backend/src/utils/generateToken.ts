@@ -7,7 +7,7 @@ if (!accessSecret || !refreshSecret) {
 }
 export const generateAccessToken = (userId: string) => {
   const options: SignOptions = {
-    expiresIn: "45m",
+    expiresIn: "15m",
   };
   return jwt.sign({ userId }, accessSecret, options);
 };

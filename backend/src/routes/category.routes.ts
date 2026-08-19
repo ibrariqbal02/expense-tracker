@@ -3,7 +3,7 @@ import {
   createCategory,
   getCategories,
 } from "../controllers/category.controller";
-import { isAuthenticated } from "../middlewares/auth.middleware";
+import  isAuthenticated from "../middlewares/auth.middleware";
 
 const categoryRoutes = Router();
 
