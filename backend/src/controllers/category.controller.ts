@@ -52,3 +52,31 @@ export const createCategory = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const getCategories = async (req: Request, res: Response) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized.",
+      });
+    }
+
+    const categories = await Category.find({
+      user: req.userId,
+    }).sort({ name: 1 });
+
+    return res.status(200).json({
+      success: true,
+      message:`Total ${categories.length} Categories `,
+      categories,
+    });
+  } catch (error) {
+    console.error("Get categories error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error.",
+    });
+  }
+};
