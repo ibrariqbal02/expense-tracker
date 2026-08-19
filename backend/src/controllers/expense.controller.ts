@@ -113,3 +113,69 @@ export const updateExpense = async (req: Request, res: Response) => {
     });
   }
 };
+export const getExpenses = async (req: Request, res: Response) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized.",
+      });
+    }
+
+    const expenses = await Expense.find({
+      user: req.userId,
+    }).sort({ date: -1 });
+
+    return res.status(200).json({
+      success: true,
+      message: `Expenses ${expenses.length} fetched successfully.`,
+      expenses,
+    });
+  } catch (error) {
+    console.error("Get expenses error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error.",
+    });
+  }
+};
+
+export const deleteExpense = async (req: Request, res: Response) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized.",
+      });
+    }
+
+    const { id } = req.params;
+
+    const expense = await Expense.findOne({
+      _id: id,
+      user: req.userId,
+    });
+
+    if (!expense) {
+      return res.status(404).json({
+        success: false,
+        message: "Expense not found.",
+      });
+    }
+
+    await Expense.findByIdAndDelete(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Expense deleted successfully.",
+    });
+  } catch (error) {
+    console.error("Delete expense error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error.",
+    });
+  }
+};
