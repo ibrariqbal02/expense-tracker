@@ -7,7 +7,7 @@ const profileRouter = Router();
 
 profileRouter.get("/my-profile", isAuthenticated, myprofile);
 profileRouter.put(
-  "/profile",
+  "/profile-update",
   isAuthenticated,
   upload.single("profileUrl"),
   updateProfile

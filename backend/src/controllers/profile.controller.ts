@@ -32,9 +32,6 @@ export const updateProfile = async (req: Request, res: Response) => {
     const userId = req.userId;
     const { name } = req.body;
 
-    console.log("BODY:", req.body);
-    console.log("FILE:", req.file);
-
     const user = await User.findById(userId);
 
     if (!user) {

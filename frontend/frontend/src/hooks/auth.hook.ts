@@ -14,20 +14,19 @@ export const useLogin = () => {
   });
 };
 
+export const useLogout = () => {
+  const queryClient = useQueryClient();
 
-export const useLogout = ()=>{
-    const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: authService.logout,
 
-    return useMutation({
-        mutationFn: authService.logout,
-
-        onSuccess:()=>{
-            queryClient.removeQueries({
-                queryKey:["me"]
-            })
-        }
-    })
-}
+    onSuccess: () => {
+      queryClient.removeQueries({
+        queryKey: ["me"],
+      });
+    },
+  });
+};
 
 export const useUpdatePassword = () => {
   return useMutation({
