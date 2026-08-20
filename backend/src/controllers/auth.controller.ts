@@ -21,7 +21,8 @@ export const register = async (req: Request, res: Response) => {
       });
     }
 
-    const existingUser = await User.findOne({ email });
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingUser = await User.findOne({ email: normalizedEmail });
 
     if (existingUser) {
       return res.status(409).json({
@@ -34,7 +35,7 @@ export const register = async (req: Request, res: Response) => {
 
     const user = await User.create({
       name,
-      email,
+      email:normalizedEmail,
       password: hashedPassword,
     });
 
@@ -123,7 +124,7 @@ export const login = async (req: Request, res: Response) => {
 export const logout = async (req: Request, res: Response) => {
   try {
     const userId = req.userId;
-console.log(userId)
+    console.log(userId);
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -249,7 +250,6 @@ export const updatePassword = async (req: Request, res: Response) => {
 
     user.password = hashedPassword;
 
-
     user.refreshToken = "";
 
     await user.save();
@@ -267,4 +267,3 @@ export const updatePassword = async (req: Request, res: Response) => {
     });
   }
 };
-
