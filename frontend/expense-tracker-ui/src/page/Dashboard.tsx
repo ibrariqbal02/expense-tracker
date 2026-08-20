@@ -23,6 +23,12 @@ export const Dashboard = () => {
                                 Expenses
                             </Link>
                             <Link
+                                to="/dashboard/categories"
+                                className="text-sm font-medium text-gray-600 hover:text-blue-600"
+                            >
+                                Category
+                            </Link>
+                            <Link
                                 to="/dashboard/profile"
                                 className="text-sm font-medium text-gray-600 hover:text-blue-600"
                             >

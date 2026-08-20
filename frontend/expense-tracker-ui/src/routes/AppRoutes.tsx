@@ -1,11 +1,12 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import Login from "../pages/Login";
-import Register from "../pages/Register";
-import Profile from "../pages/Profile";
-import { Dashboard } from "../pages/Dashboard";
-import { DashboardOverview } from "../pages/DashboardOverview";
-import Expenses from "../pages/Expenses";
+import Login from "../page/Login";
+import Register from "../page/Register";
+import Profile from "../page/Profile";
+import { Dashboard } from "../page/Dashboard";
+import { DashboardOverview } from "../page/DashboardOverview";
+import Expenses from "../page/Expenses";
+import Categories from "../page/Categories";
 
 
 export const AppRoutes = () => {
@@ -18,6 +19,7 @@ export const AppRoutes = () => {
         <Route index element={<DashboardOverview />} />
         <Route path="profile" element={<Profile />} />
         <Route path="expenses" element={<Expenses />} /> 
+        <Route path="categories" element={<Categories />} /> {/* Category Route */}
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
