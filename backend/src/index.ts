@@ -1,5 +1,6 @@
 import express, { Application } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import connectDb from "./config/database";
 import authRouter from "./routes/auth.routes";
@@ -12,16 +13,13 @@ const app: Application = express();
 connectDb();
 const PORT: number = Number(process.env.PORT) || 4000;
 
-//meddleware
 app.use(express.json());
-
-
-
+app.use(cookieParser());
 
 app.use(
   cors({
-    origin: "http://localhost:5173", 
-    credentials: true, 
+    origin: "http://localhost:5173",
+    credentials: true,
   })
 );
 // Routes

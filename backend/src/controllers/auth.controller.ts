@@ -101,6 +101,13 @@ export const login = async (req: Request, res: Response) => {
     user.refreshToken = refreshToken;
     await user.save();
 
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 45 * 60 * 1000, // 45 minutes
+    });
+
     return res.status(200).json({
       success: true,
       message: "Login successful.",
@@ -109,8 +116,6 @@ export const login = async (req: Request, res: Response) => {
         name: user.name,
         email: user.email,
       },
-      accessToken,
-      refreshToken,
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -144,6 +149,12 @@ export const logout = async (req: Request, res: Response) => {
         message: "User not found.",
       });
     }
+
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
 
     return res.status(200).json({
       success: true,

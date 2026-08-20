@@ -7,28 +7,12 @@ export const isAuthenticated = (
   next: NextFunction
 ) => {
   try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader) {
-      return res.status(401).json({
-        success: false,
-        message: "Authorization header is required.",
-      });
-    }
-
-    if (!authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid authorization format.",
-      });
-    }
-
-    const token = authHeader.split(" ")[1];
+    const token = req.cookies?.accessToken;
 
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: "Access token is required.",
+        message: "Authorization is required.",
       });
     }
 
