@@ -30,7 +30,7 @@ export default function Profile() {
     const formData = new FormData();
     formData.append("name", name);
     if (selectedFile) {
-      formData.append("file", selectedFile); // Matches req.file in Multer
+      formData.append("profileUrl", selectedFile);
     }
 
     updateProfile(formData, {
