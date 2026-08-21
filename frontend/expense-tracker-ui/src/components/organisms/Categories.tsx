@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { useGetCategories, useCreateCategory } from "../hooks/useCategories";
+
 import toast from "react-hot-toast";
+import { useCreateCategory, useGetCategories } from "../../hooks/useCategories";
 
 export default function Categories() {
   const { data: categories = [], isLoading } = useGetCategories();

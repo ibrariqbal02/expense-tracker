@@ -1,7 +1,7 @@
 
 
 import { useNavigate } from "react-router-dom";
-import { useLogout } from "../hooks/auth.hook";
+import { useLogout } from "../../hooks/auth.hook";
 
 export default function LogoutButton() {
   const { mutate: logout, isPending } = useLogout();

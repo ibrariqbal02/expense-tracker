@@ -4,9 +4,10 @@ import Login from "../page/Login";
 import Register from "../page/Register";
 import Profile from "../page/Profile";
 import { Dashboard } from "../page/Dashboard";
-import { DashboardOverview } from "../page/DashboardOverview";
+import { DashboardOverview } from "../components/organisms/DashboardOverview";
 import Expenses from "../page/Expenses";
-import Categories from "../page/Categories";
+import Categories from "../components/organisms/Categories";
+
 
 
 export const AppRoutes = () => {
