@@ -8,8 +8,24 @@ import {
 import toast from "react-hot-toast";
 import { useGetCategories } from "../hooks/useCategories";
 
+const emptyFilters = {
+    search: "",
+    category: "",
+    startDate: "",
+    endDate: "",
+    minAmount: "",
+    maxAmount: "",
+};
+
 export default function Expenses() {
-    const { data: expenses = [], isLoading } = useGetExpenses();
+    const [filters, setFilters] = useState(emptyFilters);
+    const [appliedFilters, setAppliedFilters] = useState<typeof emptyFilters | undefined>(undefined);
+
+    const { data: expenses = [], isLoading } = useGetExpenses(
+        appliedFilters
+            ? Object.fromEntries(Object.entries(appliedFilters).filter(([, v]) => v !== ""))
+            : undefined
+    );
     const { mutate: createExpense, isPending: isCreating } = useCreateExpense();
     const { mutate: updateExpense, isPending: isUpdating } = useUpdateExpense();
     const { mutate: deleteExpense } = useDeleteExpense();
@@ -118,6 +134,76 @@ export default function Expenses() {
                 >
                     + Add Expense
                 </button>
+            </div>
+
+            {/* Filters */}
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <input
+                        type="text"
+                        placeholder="Search by title..."
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                        value={filters.search}
+                        onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                    />
+                    <select
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none bg-white"
+                        value={filters.category}
+                        onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+                    >
+                        <option value="">All Categories</option>
+                        {categories.map((cat) => (
+                            <option key={cat._id} value={cat._id}>
+                                {cat.name}
+                            </option>
+                        ))}
+                    </select>
+                    <div className="flex gap-2">
+                        <input
+                            type="number"
+                            placeholder="Min $"
+                            className="w-1/2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                            value={filters.minAmount}
+                            onChange={(e) => setFilters({ ...filters, minAmount: e.target.value })}
+                        />
+                        <input
+                            type="number"
+                            placeholder="Max $"
+                            className="w-1/2 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                            value={filters.maxAmount}
+                            onChange={(e) => setFilters({ ...filters, maxAmount: e.target.value })}
+                        />
+                    </div>
+                    <input
+                        type="date"
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                        value={filters.startDate}
+                        onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                    />
+                    <input
+                        type="date"
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                        value={filters.endDate}
+                        onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                    />
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setAppliedFilters({ ...filters })}
+                            className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition"
+                        >
+                            Apply
+                        </button>
+                        <button
+                            onClick={() => {
+                                setFilters(emptyFilters);
+                                setAppliedFilters(undefined);
+                            }}
+                            className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                        >
+                            Reset
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* Expenses Table */}
