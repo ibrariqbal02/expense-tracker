@@ -84,8 +84,8 @@ export const updateExpense = async (req: Request, res: Response) => {
       expense.amount = amount;
     }
 
-    if(category !== undefined){
-        expense.category = category;
+    if (category !== undefined) {
+      expense.category = category;
     }
     if (date !== undefined) {
       expense.date = date;
@@ -98,14 +98,14 @@ export const updateExpense = async (req: Request, res: Response) => {
     if (receiptUrl !== undefined) {
       expense.receiptUrl = receiptUrl;
     }
-    await expense.save()
-     return res.status(200).json({
+    await expense.save();
+    return res.status(200).json({
       success: true,
       message: "Expense updated successfully.",
       expense,
     });
   } catch (error) {
-     console.error("Update expense error:", error);
+    console.error("Update expense error:", error);
 
     return res.status(500).json({
       success: false,
@@ -122,13 +122,38 @@ export const getExpenses = async (req: Request, res: Response) => {
       });
     }
 
-    const expenses = await Expense.find({
-      user: req.userId,
-    }).sort({ date: -1 });
+    const { search, category, startDate, endDate, minAmount, maxAmount } =
+      req.query;
+    const filter: any = { user: req.userId };
+    if (search) {
+      filter.title = { $regex: search as string, $options: "i" };
+    }
+    if (category) {
+      filter.category = category;
+    }
+    if (minAmount || maxAmount) {
+      filter.amount = {};
+      if (minAmount) filter.amount.$gte = Number(minAmount);
+      if (maxAmount) filter.amount.$lte = Number(maxAmount);
+    }
+
+    if (startDate || endDate) {
+      filter.date = {};
+      if (startDate) filter.date.$gte = new Date(startDate as string);
+      if (endDate) {
+        // Set end date to end of the selected day (23:59:59)
+        const end = new Date(endDate as string);
+        end.setHours(23, 59, 59, 999);
+        filter.date.$lte = end;
+      }
+    }
+    const expenses = await Expense.find(filter)
+      .populate("category", "name")
+      .sort({ date: -1 });
 
     return res.status(200).json({
       success: true,
-      message: `Expenses ${expenses.length} fetched successfully.`,
+      message: `Fetched ${expenses.length} expenses successfully.`,
       expenses,
     });
   } catch (error) {
