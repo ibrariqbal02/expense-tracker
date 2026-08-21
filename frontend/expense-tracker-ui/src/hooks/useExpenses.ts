@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as expenseService from "../services/expense.service";
 
-export const useGetExpenses = () => {
+export const useGetExpenses = (filters?: Record<string, any>) => {
   return useQuery({
-    queryKey: ["expenses"],
-    queryFn: expenseService.getExpenses,
+    queryKey: ["expenses", filters],
+    queryFn: () => expenseService.getExpenses(filters),
   });
 };
 

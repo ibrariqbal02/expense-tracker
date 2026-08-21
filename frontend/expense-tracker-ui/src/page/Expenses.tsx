@@ -9,7 +9,18 @@ import toast from "react-hot-toast";
 import { useGetCategories } from "../hooks/useCategories";
 
 export default function Expenses() {
-    const { data: expenses = [], isLoading } = useGetExpenses();
+
+    const [filters, setFilters] = useState({
+        search: "",
+        category: "",
+        startDate: "",
+        endDate: "",
+        minAmount: "",
+        maxAmount: "",
+    });
+
+
+    const { data: expenses = [], isLoading } = useGetExpenses(filters);
     const { mutate: createExpense, isPending: isCreating } = useCreateExpense();
     const { mutate: updateExpense, isPending: isUpdating } = useUpdateExpense();
     const { mutate: deleteExpense } = useDeleteExpense();
@@ -25,6 +36,23 @@ export default function Expenses() {
         date: new Date().toISOString().split("T")[0],
         description: "",
     });
+
+
+    const handleFilterChange = (key: string, value: string) => {
+        setFilters((prev) => ({ ...prev, [key]: value }));
+    };
+
+
+    const handleClearFilters = () => {
+        setFilters({
+            search: "",
+            category: "",
+            startDate: "",
+            endDate: "",
+            minAmount: "",
+            maxAmount: "",
+        });
+    };
 
     const handleOpenModal = (expense?: any) => {
         if (expense) {
@@ -100,7 +128,7 @@ export default function Expenses() {
         }
     };
 
-    const totalExpense = expenses.reduce((acc, curr) => acc + curr.amount, 0);
+    const totalExpense = expenses.reduce((acc: number, curr: any) => acc + curr.amount, 0);
 
     return (
         <div className="space-y-6">
@@ -120,18 +148,91 @@ export default function Expenses() {
                 </button>
             </div>
 
+            {/* Filter and Search Bar */}
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                    <h3 className="text-sm font-semibold text-gray-700">Filter Expenses</h3>
+                    <button
+                        onClick={handleClearFilters}
+                        className="text-xs text-blue-600 hover:underline font-medium"
+                    >
+                        Reset Filters
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                    {/* Search by Title */}
+                    <input
+                        type="text"
+                        placeholder="Search title..."
+                        value={filters.search}
+                        onChange={(e) => handleFilterChange("search", e.target.value)}
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    />
+
+                    {/* Category Filter */}
+                    <select
+                        value={filters.category}
+                        onChange={(e) => handleFilterChange("category", e.target.value)}
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none bg-white"
+                    >
+                        <option value="">All Categories</option>
+                        {categories.map((cat: any) => (
+                            <option key={cat._id} value={cat._id}>
+                                {cat.name}
+                            </option>
+                        ))}
+                    </select>
+
+                    {/* Min Amount */}
+                    <input
+                        type="number"
+                        placeholder="Min $"
+                        value={filters.minAmount}
+                        onChange={(e) => handleFilterChange("minAmount", e.target.value)}
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    />
+
+                    {/* Max Amount */}
+                    <input
+                        type="number"
+                        placeholder="Max $"
+                        value={filters.maxAmount}
+                        onChange={(e) => handleFilterChange("maxAmount", e.target.value)}
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    />
+
+                    {/* Start Date */}
+                    <input
+                        type="date"
+                        value={filters.startDate}
+                        onChange={(e) => handleFilterChange("startDate", e.target.value)}
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    />
+
+                    {/* End Date */}
+                    <input
+                        type="date"
+                        value={filters.endDate}
+                        onChange={(e) => handleFilterChange("endDate", e.target.value)}
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    />
+                </div>
+            </div>
+
             {/* Expenses Table */}
             <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
                 {isLoading ? (
                     <div className="p-8 text-center text-gray-500">Loading expenses...</div>
                 ) : expenses.length === 0 ? (
-                    <div className="p-8 text-center text-gray-500">No expenses found. Add one above!</div>
+                    <div className="p-8 text-center text-gray-500">No expenses match your criteria.</div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm text-gray-600">
                             <thead className="bg-gray-50 text-xs uppercase text-gray-500 border-b border-gray-200">
                                 <tr>
                                     <th className="px-6 py-3">Title</th>
+                                    <th className="px-6 py-3">Category</th>
                                     <th className="px-6 py-3">Amount</th>
                                     <th className="px-6 py-3">Date</th>
                                     <th className="px-6 py-3">Description</th>
@@ -139,9 +240,14 @@ export default function Expenses() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
-                                {expenses.map((expense) => (
+                                {expenses.map((expense: any) => (
                                     <tr key={expense._id} className="hover:bg-gray-50 transition">
                                         <td className="px-6 py-4 font-medium text-gray-900">{expense.title}</td>
+                                        <td className="px-6 py-4">
+                                            <span className="inline-block rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+                                                {expense.category?.name || "Uncategorized"}
+                                            </span>
+                                        </td>
                                         <td className="px-6 py-4 font-semibold text-red-600">${expense.amount.toFixed(2)}</td>
                                         <td className="px-6 py-4">{new Date(expense.date).toLocaleDateString()}</td>
                                         <td className="px-6 py-4 max-w-xs truncate">{expense.description || "-"}</td>
@@ -167,7 +273,7 @@ export default function Expenses() {
                 )}
             </div>
 
-            {/* Add / Edit Expense Modal */}
+            {/* Modal remains unchanged */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
                     <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg border border-gray-200">
@@ -210,7 +316,7 @@ export default function Expenses() {
                                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                                 >
                                     <option value="">Select a Category</option>
-                                    {categories.map((cat) => (
+                                    {categories.map((cat: any) => (
                                         <option key={cat._id} value={cat._id}>
                                             {cat.name}
                                         </option>

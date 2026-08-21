@@ -27,11 +27,16 @@ export type UpdateExpensePayload = Partial<CreateExpensePayload> & {
   id: string;
 };
 
-export const getExpenses = async (): Promise<ExpenseItem[]> => {
-  const response = await api.get("/expense");
+// export const getExpenses = async (): Promise<ExpenseItem[]> => {
+//   const response = await api.get("/expense");
+//   return response.data.expenses;
+// };
+
+
+export const getExpenses = async (params?: Record<string, any>) => {
+  const response = await api.get("/expense", { params });
   return response.data.expenses;
 };
-
 export const createExpense = async (data: CreateExpensePayload) => {
   const response = await api.post("/expense/", data);
   return response.data;
