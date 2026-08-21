@@ -156,7 +156,7 @@ export default function Expenses() {
                         onClick={handleClearFilters}
                         className="text-xs text-blue-600 hover:underline font-medium"
                     >
-                        Reset Filters
+                        {/* Reset Filters */}
                     </button>
                 </div>
 
