@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { myprofile, updateProfile } from "../controllers/profile.controller";
-import { isAuthenticated } from "../middlewares/auth.middleware";
+import isAuthenticated from "../middlewares/auth.middleware";
 import upload from "../config/multer";
 
 const profileRouter = Router();
 
 profileRouter.get("/my-profile", isAuthenticated, myprofile);
 profileRouter.put(
-  "/profile",
+  "/profile-update",
   isAuthenticated,
   upload.single("profileUrl"),
   updateProfile

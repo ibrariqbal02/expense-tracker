@@ -5,4 +5,5 @@ node_modules/
 *.log
 .env
 dist/
-build/
+build/backend/tsconfig.tsbuildinfo
+*.tsbuildinfo
