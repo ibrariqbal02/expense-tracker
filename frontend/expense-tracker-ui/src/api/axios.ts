@@ -30,9 +30,14 @@ api.interceptors.response.use(
     const isAuthEndpoint =
       originalRequest?.url?.includes("/auth/login") ||
       originalRequest?.url?.includes("/auth/register") ||
+      originalRequest?.url?.includes("/auth/logout") ||
       originalRequest?.url?.includes("/auth/refresh-token");
 
-    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !isAuthEndpoint
+    ) {
       if (isRefreshing) {
         // Queue this request until the ongoing refresh completes.
         return new Promise((resolve, reject) => {

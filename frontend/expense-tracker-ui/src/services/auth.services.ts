@@ -3,17 +3,16 @@ import api from "../api/axios";
 
 
 export type AuthUser = {
-  id: string;
+  _id: string;
   name: string;
   email: string;
 };
 
+// Tokens are now httpOnly cookies — the body only contains user info.
 export type LoginResponse = {
   success: boolean;
   message: string;
   user: AuthUser;
-  accessToken: string;
-  refreshToken: string;
 };
 
 export const register = async (data: {
@@ -34,11 +33,13 @@ export const login = async (data: {
 };
 
 export const logout = async () => {
+  // Backend route: GET /auth/logout (protected by isAuthenticated)
   const response = await api.get("/auth/logout");
   return response.data;
 };
 
 export const refreshToken = async () => {
+  // Sends the refreshToken cookie automatically via withCredentials
   const response = await api.post("/auth/refresh-token");
   return response.data;
 };
