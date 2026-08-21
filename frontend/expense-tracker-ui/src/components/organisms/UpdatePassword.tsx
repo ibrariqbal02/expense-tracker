@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 
 import { useNavigate } from "react-router-dom";
-import { useUpdatePassword } from "../hooks/auth.hook";
+import { useUpdatePassword } from "../../hooks/auth.hook";
 
 export default function UpdatePassword() {
   const [formData, setFormData] = useState({ currentPassword: "", newPassword: "" });

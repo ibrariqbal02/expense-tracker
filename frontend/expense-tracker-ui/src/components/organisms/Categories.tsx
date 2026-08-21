@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useGetCategories, useCreateCategory } from "../hooks/useCategories";
+import { useCreateCategory, useGetCategories } from "../../hooks/useCategories";
 import toast from "react-hot-toast";
 
 export default function Categories() {
