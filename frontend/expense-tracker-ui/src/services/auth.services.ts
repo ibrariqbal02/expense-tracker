@@ -38,6 +38,11 @@ export const logout = async () => {
   return response.data;
 };
 
+export const refreshToken = async () => {
+  const response = await api.post("/auth/refresh-token");
+  return response.data;
+};
+
 export const updatePassword = async (data: { currentPassword: string; newPassword: string }) => {
   const response = await api.patch("/auth/update-password", data);
   return response.data;

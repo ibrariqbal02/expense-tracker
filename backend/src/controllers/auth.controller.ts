@@ -105,7 +105,14 @@ export const login = async (req: Request, res: Response) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 45 * 60 * 1000, // 45 minutes
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     return res.status(200).json({
@@ -156,6 +163,12 @@ export const logout = async (req: Request, res: Response) => {
       sameSite: "lax",
     });
 
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
+
     return res.status(200).json({
       success: true,
       message: "Logged out successfully.",
@@ -172,7 +185,7 @@ export const logout = async (req: Request, res: Response) => {
 
 export const refreshToken = async (req: Request, res: Response) => {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = req.cookies?.refreshToken;
 
     if (!refreshToken) {
       return res.status(400).json({
@@ -204,10 +217,16 @@ export const refreshToken = async (req: Request, res: Response) => {
 
     const newAccessToken = generateAccessToken(user._id.toString());
 
+    res.cookie("accessToken", newAccessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 45 * 60 * 1000, // 45 minutes
+    });
+
     return res.status(200).json({
       success: true,
       message: "Access token refreshed successfully.",
-      accessToken: newAccessToken,
     });
   } catch (error) {
     console.error("Refresh token error:", error);
