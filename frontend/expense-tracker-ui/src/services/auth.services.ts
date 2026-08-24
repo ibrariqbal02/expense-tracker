@@ -33,13 +33,13 @@ export const login = async (data: {
 };
 
 export const logout = async () => {
-  // Backend route: GET /auth/logout (protected by isAuthenticated)
+
   const response = await api.get("/auth/logout");
   return response.data;
 };
 
 export const refreshToken = async () => {
-  // Sends the refreshToken cookie automatically via withCredentials
+
   const response = await api.post("/auth/refresh-token");
   return response.data;
 };

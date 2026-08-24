@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createExpense, deleteExpense, getExpenses, updateExpense } from "../controllers/expense.controller";
+import { createExpense, deleteExpense, getDashboardStats, getExpenses, updateExpense } from "../controllers/expense.controller";
 import { isAuthenticated } from "../middlewares/auth.middleware";
 
 
@@ -10,4 +10,5 @@ expenseRouter.put('/updated/:id', isAuthenticated,updateExpense)
 expenseRouter.get("/", isAuthenticated, getExpenses);
 
 expenseRouter.delete("/:id", isAuthenticated, deleteExpense);
+expenseRouter.get("/dashboard", isAuthenticated,getDashboardStats)
 export default expenseRouter

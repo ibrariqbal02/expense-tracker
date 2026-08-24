@@ -12,14 +12,7 @@ export const createExpense = async (req: Request, res: Response) => {
       });
     }
 
-    const {
-      title,
-      amount,
-      category,
-      date,
-      description,
-      receiptUrl,
-    } = req.body;
+    const { title, amount, category, date, description, receiptUrl } = req.body;
 
     if (!title || amount === undefined || !category) {
       return res.status(400).json({
@@ -112,8 +105,8 @@ export const updateExpense = async (req: Request, res: Response) => {
       expense.amount = amount;
     }
 
-    if(category !== undefined){
-        expense.category = category;
+    if (category !== undefined) {
+      expense.category = category;
     }
     if (date !== undefined) {
       expense.date = date;
@@ -126,14 +119,14 @@ export const updateExpense = async (req: Request, res: Response) => {
     if (receiptUrl !== undefined) {
       expense.receiptUrl = receiptUrl;
     }
-    await expense.save()
-     return res.status(200).json({
+    await expense.save();
+    return res.status(200).json({
       success: true,
       message: "Expense updated successfully.",
       expense,
     });
   } catch (error) {
-     console.error("Update expense error:", error);
+    console.error("Update expense error:", error);
 
     return res.status(500).json({
       success: false,
@@ -235,5 +228,90 @@ export const deleteExpense = async (req: Request, res: Response) => {
       success: false,
       message: "Internal Server Error.",
     });
+  }
+};
+
+export const getDashboardStats = async (req: Request, res: Response) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized." });
+    }
+    const userId = new mongoose.Types.ObjectId(req.userId);
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999
+    );
+    const totalResult = await Expense.aggregate([
+      { $match: { user: userId } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+    const totalExpenses = totalResult[0]?.total || 0;
+
+    const thisMonthResult = await Expense.aggregate([
+      {
+        $match: {
+          user: userId,
+          date: { $gte: startOfMonth, $lte: endOfMonth },
+        },
+      },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+    const thisMonthExpenses = thisMonthResult[0]?.total || 0;
+
+    const expensesByCategory = await Expense.aggregate([
+      { $match: { user: userId } },
+      {
+        $group: {
+          _id: "$category",
+          totalAmount: { $sum: "$amount" },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "_id",
+          foreignField: "_id",
+          as: "categoryInfo",
+        },
+      },
+      { $unwind: "$categoryInfo" },
+      {
+        $project: {
+          _id: 1,
+          name: "$categoryInfo.name",
+          totalAmount: 1,
+          count: 1,
+        },
+      },
+      { $sort: { totalAmount: -1 } },
+    ]);
+
+    const recentExpenses = await Expense.find({ user: userId })
+      .populate("category", "name")
+      .sort({ date: -1 })
+      .limit(5);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalExpenses,
+        thisMonthExpenses,
+        expensesByCategory,
+        recentExpenses,
+      },
+    });
+  } catch (error) {
+    console.error("Dashboard stats error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal Server Error." });
   }
 };
