@@ -48,3 +48,5 @@ export const updatePassword = async (data: { currentPassword: string; newPasswor
   const response = await api.patch("/auth/update-password", data);
   return response.data;
 };
+
+

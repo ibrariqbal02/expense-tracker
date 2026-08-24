@@ -55,3 +55,8 @@ export const deleteExpense = async (id: string) => {
   const response = await api.delete(`/expense/${id}`);
   return response.data;
 };
+
+export const getDashboardStats = async () => {
+  const response = await api.get("/expense/dashboard");
+  return response.data.data;
+};

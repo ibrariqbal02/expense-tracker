@@ -41,3 +41,11 @@ export const useDeleteExpense = () => {
     },
   });
 };
+
+
+export const useGetDashboardStats = () => {
+  return useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: expenseService.getDashboardStats,
+  });
+};
