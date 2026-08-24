@@ -4,7 +4,7 @@ import Login from "../page/Login";
 import Register from "../page/Register";
 import Profile from "../page/Profile";
 import { Dashboard } from "../page/Dashboard";
-import { DashboardOverview } from "../components/organisms/DashboardOverview";
+import DashboardOverview from "../components/organisms/DashboardOverview";
 import Expenses from "../page/Expenses";
 import Categories from "../components/organisms/Categories";
 

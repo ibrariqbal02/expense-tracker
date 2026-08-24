@@ -17,9 +17,12 @@ const emptyFilters = {
     maxAmount: "",
 };
 
+const PAGE_SIZE = 10;
+
 export default function Expenses() {
     const [filters, setFilters] = useState(emptyFilters);
     const [appliedFilters, setAppliedFilters] = useState<typeof emptyFilters | undefined>(undefined);
+    const [currentPage, setCurrentPage] = useState(1);
 
     const { data: expenses = [], isLoading } = useGetExpenses(
         appliedFilters
@@ -118,6 +121,10 @@ export default function Expenses() {
 
     const totalExpense = expenses.reduce((acc, curr) => acc + curr.amount, 0);
 
+    const totalPages = Math.max(1, Math.ceil(expenses.length / PAGE_SIZE));
+    const safePage = Math.min(currentPage, totalPages);
+    const paginatedExpenses = expenses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
     return (
         <div className="space-y-6">
             {/* Header and Summary */}
@@ -188,7 +195,10 @@ export default function Expenses() {
                     />
                     <div className="flex gap-2">
                         <button
-                            onClick={() => setAppliedFilters({ ...filters })}
+                            onClick={() => {
+                                setAppliedFilters({ ...filters });
+                                setCurrentPage(1);
+                            }}
                             className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition"
                         >
                             Apply
@@ -197,6 +207,7 @@ export default function Expenses() {
                             onClick={() => {
                                 setFilters(emptyFilters);
                                 setAppliedFilters(undefined);
+                                setCurrentPage(1);
                             }}
                             className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
                         >
@@ -225,7 +236,7 @@ export default function Expenses() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
-                                {expenses.map((expense) => (
+                                {paginatedExpenses.map((expense) => (
                                     <tr key={expense._id} className="hover:bg-gray-50 transition">
                                         <td className="px-6 py-4 font-medium text-gray-900">{expense.title}</td>
                                         <td className="px-6 py-4 font-semibold text-red-600">${expense.amount.toFixed(2)}</td>
@@ -249,6 +260,35 @@ export default function Expenses() {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                )}
+
+                {/* Pagination */}
+                {expenses.length > 0 && (
+                    <div className="flex items-center justify-between border-t border-gray-200 px-6 py-3">
+                        <p className="text-sm text-gray-500">
+                            Showing {(safePage - 1) * PAGE_SIZE + 1}-{Math.min(safePage * PAGE_SIZE, expenses.length)} of{" "}
+                            {expenses.length}
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                                disabled={safePage === 1}
+                                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition"
+                            >
+                                Previous
+                            </button>
+                            <span className="text-sm text-gray-600">
+                                Page {safePage} of {totalPages}
+                            </span>
+                            <button
+                                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                                disabled={safePage === totalPages}
+                                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition"
+                            >
+                                Next
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
