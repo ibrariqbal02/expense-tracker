@@ -24,6 +24,12 @@ export default function Profile() {
     }
   }, [passwordSuccess]);
 
+  useEffect(() => {
+    if (user) {
+      setName(user.name || "");
+    }
+  }, [user]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -63,8 +69,8 @@ export default function Profile() {
         {/* Avatar Section */}
         <div className="flex items-center space-x-6">
           <div className="relative h-24 w-24 overflow-hidden rounded-full border-2 border-gray-200 bg-gray-100">
-            {preview ? (
-              <img src={preview} alt="Profile" className="h-full w-full object-cover" />
+            {preview || user?.profileUrl ? (
+              <img src={preview || user?.profileUrl} alt="Profile" className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-xl font-bold text-gray-400">
                 {user?.name?.charAt(0).toUpperCase()}

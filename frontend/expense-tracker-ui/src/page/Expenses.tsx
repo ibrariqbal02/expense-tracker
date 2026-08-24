@@ -265,7 +265,7 @@ export default function Expenses() {
 
                 {/* Pagination */}
                 {expenses.length > 0 && (
-                    <div className="flex items-center justify-between border-t border-gray-200 px-6 py-3">
+                    <div className="flex flex-col gap-3 border-t border-gray-200 px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-sm text-gray-500">
                             Showing {(safePage - 1) * PAGE_SIZE + 1}-{Math.min(safePage * PAGE_SIZE, expenses.length)} of{" "}
                             {expenses.length}
@@ -296,7 +296,7 @@ export default function Expenses() {
             {/* Add / Edit Expense Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
-                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg border border-gray-200">
+                    <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-xl bg-white p-6 shadow-lg border border-gray-200">
                         <h3 className="text-xl font-bold text-gray-800 mb-4">
                             {editingId ? "Edit Expense" : "Add New Expense"}
                         </h3>
