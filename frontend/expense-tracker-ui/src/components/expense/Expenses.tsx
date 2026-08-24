@@ -4,9 +4,9 @@ import {
     useCreateExpense,
     useUpdateExpense,
     useDeleteExpense,
-} from "../hooks/useExpenses";
+} from "../../hooks/useExpenses";
 import toast from "react-hot-toast";
-import { useGetCategories } from "../hooks/useCategories";
+import { useGetCategories } from "../../hooks/useCategories";
 
 const emptyFilters = {
     search: "",

@@ -1,5 +1,5 @@
 import { Link, Outlet } from "react-router-dom";
-import LogoutButton from "../components/molecules/LogoutButton";
+import LogoutButton from "../Auth/LogoutButton";
 
 export const Dashboard = () => {
     return (

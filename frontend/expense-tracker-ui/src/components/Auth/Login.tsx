@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 
 import { useNavigate, Link } from "react-router-dom";
-import { useLogin } from "../hooks/auth.hook";
+import { useLogin } from "../../hooks/auth.hook";
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
