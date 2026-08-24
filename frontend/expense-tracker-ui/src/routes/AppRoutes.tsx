@@ -1,7 +1,7 @@
 
 import { Routes, Route, Navigate } from "react-router-dom";
-import Login from "../components/Auth/Login";
-import Register from "../components/Auth/Register";
+import Login from "../components/auth/Login";
+import Register from "../components/auth/Register";
 import Profile from "../components/profile/Profile";
 import { Dashboard } from "../components/dashboard/Dashboard";
 import DashboardOverview from "../components/dashboard/DashboardOverview";
