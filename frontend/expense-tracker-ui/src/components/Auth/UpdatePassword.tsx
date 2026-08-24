@@ -24,7 +24,7 @@ export default function UpdatePassword() {
 
       {isSuccess && (
         <div className="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-700 border border-green-200">
-          Password updated successfully! Redirecting to login...
+          Password updated successfully! Redirecting to login....
         </div>
       )}
 
