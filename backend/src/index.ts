@@ -7,6 +7,7 @@ import authRouter from "./routes/auth.routes";
 import profileRouter from "./routes/profile.routes";
 import expenseRouter from "./routes/expense.routes";
 import categoryRoutes from "./routes/category.routes";
+import budgetRouter from "./routes/budget.routes";
 dotenv.config();
 
 const app: Application = express();
@@ -27,6 +28,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/profile", profileRouter);
 app.use("/api/expense", expenseRouter);
 app.use("/api/category", categoryRoutes);
+app.use("/api/budget/", budgetRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

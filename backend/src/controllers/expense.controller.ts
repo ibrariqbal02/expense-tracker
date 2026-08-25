@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { Expense } from "../models/Expense";
 import mongoose from "mongoose";
 import { Category } from "../models/Category";
+import { Budget } from "../models/Budget";
 
 export const createExpense = async (req: Request, res: Response) => {
   try {
@@ -231,6 +232,94 @@ export const deleteExpense = async (req: Request, res: Response) => {
   }
 };
 
+// export const getDashboardStats = async (req: Request, res: Response) => {
+//   try {
+//     if (!req.userId) {
+//       return res.status(401).json({ success: false, message: "Unauthorized." });
+//     }
+//     const userId = new mongoose.Types.ObjectId(req.userId);
+//     const now = new Date();
+//     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+//     const endOfMonth = new Date(
+//       now.getFullYear(),
+//       now.getMonth() + 1,
+//       0,
+//       23,
+//       59,
+//       59,
+//       999
+//     );
+//     const totalResult = await Expense.aggregate([
+//       { $match: { user: userId } },
+//       { $group: { _id: null, total: { $sum: "$amount" } } },
+//     ]);
+//     const totalExpenses = totalResult[0]?.total || 0;
+
+//     const thisMonthResult = await Expense.aggregate([
+//       {
+//         $match: {
+//           user: userId,
+//           date: { $gte: startOfMonth, $lte: endOfMonth },
+//         },
+//       },
+//       { $group: { _id: null, total: { $sum: "$amount" } } },
+//     ]);
+//     const thisMonthExpenses = thisMonthResult[0]?.total || 0;
+
+//     const expensesByCategory = await Expense.aggregate([
+//       { $match: { user: userId } },
+//       {
+//         $group: {
+//           _id: "$category",
+//           totalAmount: { $sum: "$amount" },
+//           count: { $sum: 1 },
+//         },
+//       },
+//       {
+//         $lookup: {
+//           from: "categories",
+//           localField: "_id",
+//           foreignField: "_id",
+//           as: "categoryInfo",
+//         },
+//       },
+//       { $unwind: "$categoryInfo" },
+//       {
+//         $project: {
+//           _id: 1,
+//           name: "$categoryInfo.name",
+//           totalAmount: 1,
+//           count: 1,
+//         },
+//       },
+//       { $sort: { totalAmount: -1 } },
+//     ]);
+
+//     const recentExpenses = await Expense.find({ user: userId })
+//       .populate("category", "name")
+//       .sort({ date: -1 })
+//       .limit(5);
+
+//     return res.status(200).json({
+//       success: true,
+//       data: {
+//         totalExpenses,
+//         thisMonthExpenses,
+//         expensesByCategory,
+//         recentExpenses,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Dashboard stats error:", error);
+//     return res
+//       .status(500)
+//       .json({ success: false, message: "Internal Server Error." });
+//   }
+// };
+
+
+
+
 export const getDashboardStats = async (req: Request, res: Response) => {
   try {
     if (!req.userId) {
@@ -248,11 +337,14 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       59,
       999
     );
+
+  
     const totalResult = await Expense.aggregate([
       { $match: { user: userId } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
     const totalExpenses = totalResult[0]?.total || 0;
+
 
     const thisMonthResult = await Expense.aggregate([
       {
@@ -264,6 +356,13 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
     const thisMonthExpenses = thisMonthResult[0]?.total || 0;
+
+
+    const userBudget = await Budget.findOne({ user: userId });
+    const budgetLimit = userBudget ? userBudget.amount : 0;
+    const remainingBudget = Math.max(0, budgetLimit - thisMonthExpenses);
+    const percentageUsed = budgetLimit > 0 ? Number(((thisMonthExpenses / budgetLimit) * 100).toFixed(2)) : 0;
+
 
     const expensesByCategory = await Expense.aggregate([
       { $match: { user: userId } },
@@ -304,6 +403,12 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       data: {
         totalExpenses,
         thisMonthExpenses,
+        budget: {
+          limit: budgetLimit,
+          used: thisMonthExpenses,
+          remaining: remainingBudget,
+          percentageUsed,
+        },
         expensesByCategory,
         recentExpenses,
       },

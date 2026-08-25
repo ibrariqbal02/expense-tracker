@@ -4,7 +4,7 @@ import Login from "../components/auth/Login";
 import Register from "../components/auth/Register";
 import Profile from "../components/profile/Profile";
 import { Dashboard } from "../components/dashboard/Dashboard";
-import DashboardOverview from "../components/dashboard/DashboardOverview";
+import DashboardOverview from "../components/organisms/DashboardOverview";
 import Expenses from "../components/expense/Expenses";
 import Categories from "../components/category/Categories";
 

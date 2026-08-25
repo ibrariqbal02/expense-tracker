@@ -1,9 +1,20 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
-const budgetSchema = new mongoose.Schema({
-  amount: { type: Number, required: true },
-  month: { type: String, required: true }, // Format: "YYYY-MM" (e.g., "2026-08")
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
-}, { timestamps: true });
+const budgetSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true, 
+    },
+    amount: {
+      type: Number,
+      required: true,
+      min: [0, "Budget cannot be negative."],
+    },
+  },
+  { timestamps: true }
+);
 
-export const Budget = mongoose.model('Budget', budgetSchema);
+export const Budget = mongoose.model("Budget", budgetSchema);
