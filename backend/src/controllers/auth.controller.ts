@@ -9,7 +9,7 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from "../utils/generateToken";
-
+// cbkdcn,cdfnvkjfbvrk
 export const register = async (req: Request, res: Response) => {
   try {
     const { name, email, password } = req.body;
