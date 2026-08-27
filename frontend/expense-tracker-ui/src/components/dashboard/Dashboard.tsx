@@ -29,6 +29,12 @@ export const Dashboard = () => {
                                 Category
                             </Link>
                             <Link
+                                to="/dashboard/budgets"
+                                className="text-sm font-medium text-gray-600 hover:text-blue-600"
+                            >
+                                Budgets
+                            </Link>
+                            <Link
                                 to="/dashboard/profile"
                                 className="text-sm font-medium text-gray-600 hover:text-blue-600"
                             >
