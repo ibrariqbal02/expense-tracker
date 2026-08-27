@@ -7,6 +7,7 @@ import { Dashboard } from "../components/dashboard/Dashboard";
 import DashboardOverview from "../components/organisms/DashboardOverview";
 import Expenses from "../components/expense/Expenses";
 import Categories from "../components/category/Categories";
+import Budget from "../components/budget/Budget";
 
 
 export const AppRoutes = () => {
@@ -19,7 +20,8 @@ export const AppRoutes = () => {
         <Route index element={<DashboardOverview />} />
         <Route path="profile" element={<Profile />} />
         <Route path="expenses" element={<Expenses />} />
-        <Route path="categories" element={<Categories />} /> {/* Category Route */}
+        <Route path="categories" element={<Categories />} />
+        <Route path="budgets" element={<Budget />} />
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

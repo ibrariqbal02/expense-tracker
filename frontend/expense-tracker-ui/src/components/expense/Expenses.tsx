@@ -230,6 +230,7 @@ export default function Expenses() {
                                 <tr>
                                     <th className="px-6 py-3">Title</th>
                                     <th className="px-6 py-3">Amount</th>
+                                    <th className="px-6 py-3">Category</th>
                                     <th className="px-6 py-3">Date</th>
                                     <th className="px-6 py-3">Description</th>
                                     <th className="px-6 py-3 text-right">Actions</th>
@@ -240,6 +241,13 @@ export default function Expenses() {
                                     <tr key={expense._id} className="hover:bg-gray-50 transition">
                                         <td className="px-6 py-4 font-medium text-gray-900">{expense.title}</td>
                                         <td className="px-6 py-4 font-semibold text-red-600">${expense.amount.toFixed(2)}</td>
+                                        <td className="px-6 py-4">
+                                            <span className="inline-block rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                                                {typeof expense.category === "object" && expense.category !== null
+                                                    ? (expense.category as any).name
+                                                    : expense.category || "-"}
+                                            </span>
+                                        </td>
                                         <td className="px-6 py-4">{new Date(expense.date).toLocaleDateString()}</td>
                                         <td className="px-6 py-4 max-w-xs truncate">{expense.description || "-"}</td>
                                         <td className="px-6 py-4 text-right space-x-2">
