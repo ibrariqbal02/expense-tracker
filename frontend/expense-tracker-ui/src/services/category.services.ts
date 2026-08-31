@@ -1,16 +1,23 @@
 import api from "../api/axios";
+import type { Pagination } from "./expense.service";
 
 export type CategoryItem = {
   _id: string;
   name: string;
   user: string;
-  createdAt?: string;
-  updatedAt?: string;
 };
 
-export const getCategories = async (): Promise<CategoryItem[]> => {
-  const response = await api.get("/category");
-  return response.data.categories;
+export type PaginatedCategories = {
+  categories: CategoryItem[];
+  pagination: Pagination;
+};
+
+export const getCategories = async (page = 1, limit = 10): Promise<PaginatedCategories> => {
+  const response = await api.get("/category", { params: { page, limit } });
+  return {
+    categories: response.data.categories,
+    pagination: response.data.pagination,
+  };
 };
 
 export const createCategory = async (name: string) => {

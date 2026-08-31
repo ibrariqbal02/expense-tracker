@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as budgetService from "../services/budget.service";
 
-export const useGetBudgets = () => {
+export const useGetBudgets = (page = 1, limit = 10) => {
   return useQuery({
-    queryKey: ["budgets"],
-    queryFn: budgetService.getBudgets,
+    queryKey: ["budgets", page, limit],
+    queryFn: () => budgetService.getBudgets(page, limit),
+    placeholderData: (prev) => prev,
   });
 };
 
