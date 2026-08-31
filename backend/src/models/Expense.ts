@@ -14,7 +14,7 @@ const expenseSchema = new mongoose.Schema(
     receiptUrl: { type: String, default: "" },
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   },
-  { timestamps: true }
+  { timestamps: false }
 );
 
 export const Expense = mongoose.model("Expense", expenseSchema);

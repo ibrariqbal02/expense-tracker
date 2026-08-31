@@ -38,10 +38,12 @@ export const createCategory = async (req: Request, res: Response) => {
       user: req.userId,
     });
 
+    const { createdAt, updatedAt, __v, ...categoryData } = (category as any).toObject();
+
     return res.status(201).json({
       success: true,
       message: "Category created successfully.",
-      category,
+      category: categoryData,
     });
   } catch (error) {
     console.error("Create category error:", error);
@@ -62,14 +64,36 @@ export const getCategories = async (req: Request, res: Response) => {
       });
     }
 
-    const categories = await Category.find({
-      user: req.userId,
-    }).sort({ name: 1 });
+    const { page, limit } = req.query;
+
+    const pageNumber = Math.max(1, parseInt(page as string) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(limit as string) || 10));
+    const skip = (pageNumber - 1) * pageSize;
+
+    const filter = { user: req.userId };
+
+    const [categories, total] = await Promise.all([
+      Category.find(filter, { createdAt: 0, updatedAt: 0, __v: 0 })
+        .sort({ name: 1 })
+        .skip(skip)
+        .limit(pageSize),
+      Category.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(total / pageSize);
 
     return res.status(200).json({
       success: true,
-      message: `Total ${categories.length} Categories `,
+      message: `Total ${total} Categories`,
       categories,
+      pagination: {
+        total,
+        page: pageNumber,
+        limit: pageSize,
+        totalPages,
+        hasNextPage: pageNumber < totalPages,
+        hasPrevPage: pageNumber > 1,
+      },
     });
   } catch (error) {
     console.error("Get categories error:", error);

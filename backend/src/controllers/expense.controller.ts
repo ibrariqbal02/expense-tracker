@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { Expense } from "../models/Expense";
 import mongoose from "mongoose";
 import { Category } from "../models/Category";
-import { Budget } from "../models/budget";
+import { Budget } from "../models/Budget";
 
 export const createExpense = async (req: Request, res: Response) => {
   try {
@@ -48,6 +48,56 @@ export const createExpense = async (req: Request, res: Response) => {
       });
     }
 
+    // Budget exceeded check
+    const expenseDate = date ? new Date(date) : new Date();
+    const now = expenseDate;
+    const userId = new mongoose.Types.ObjectId(req.userId);
+
+    const userBudgets = await Budget.find({ user: req.userId });
+
+    for (const budget of userBudgets) {
+      let periodStart: Date;
+      let periodEnd: Date;
+
+      if (budget.period === "monthly") {
+        periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      } else {
+        periodStart = new Date(now.getFullYear(), 0, 1);
+        periodEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+      }
+
+      const spentResult = await Expense.aggregate([
+        {
+          $match: {
+            user: userId,
+            date: { $gte: periodStart, $lte: periodEnd },
+          },
+        },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]);
+
+      const alreadySpent = spentResult[0]?.total || 0;
+      const projectedSpend = alreadySpent + Number(amount);
+
+      if (projectedSpend > budget.amount) {
+        const overBy = (projectedSpend - budget.amount).toFixed(2);
+        const remaining = Math.max(0, budget.amount - alreadySpent).toFixed(2);
+        return res.status(422).json({
+          success: false,
+          message: `Adding this expense exceeds your "${budget.name}" ${budget.period} budget by $${overBy}. Remaining budget: $${remaining}.`,
+          budget: {
+            name: budget.name,
+            period: budget.period,
+            limit: budget.amount,
+            spent: alreadySpent,
+            remaining: Number(remaining),
+            overBy: Number(overBy),
+          },
+        });
+      }
+    }
+
     const expense = await Expense.create({
       title: title.trim(),
       amount: Number(amount),
@@ -58,10 +108,12 @@ export const createExpense = async (req: Request, res: Response) => {
       user: req.userId,
     });
 
+    const { createdAt, updatedAt, __v, ...expenseData } = (expense as any).toObject();
+
     return res.status(201).json({
       success: true,
       message: "Expense created successfully.",
-      expense,
+      expense: expenseData,
     });
   } catch (error) {
     console.error("Create expense error:", error);
@@ -120,11 +172,68 @@ export const updateExpense = async (req: Request, res: Response) => {
     if (receiptUrl !== undefined) {
       expense.receiptUrl = receiptUrl;
     }
+
+    // Budget exceeded check — only when amount is being increased
+    if (amount !== undefined) {
+      const amountDelta = Number(amount) - expense.amount;
+      if (amountDelta > 0) {
+        const expenseDate = expense.date || new Date();
+        const userId = new mongoose.Types.ObjectId(req.userId);
+        const userBudgets = await Budget.find({ user: req.userId });
+
+        for (const budget of userBudgets) {
+          let periodStart: Date;
+          let periodEnd: Date;
+
+          if (budget.period === "monthly") {
+            periodStart = new Date(expenseDate.getFullYear(), expenseDate.getMonth(), 1);
+            periodEnd = new Date(expenseDate.getFullYear(), expenseDate.getMonth() + 1, 0, 23, 59, 59, 999);
+          } else {
+            periodStart = new Date(expenseDate.getFullYear(), 0, 1);
+            periodEnd = new Date(expenseDate.getFullYear(), 11, 31, 23, 59, 59, 999);
+          }
+
+          const spentResult = await Expense.aggregate([
+            {
+              $match: {
+                user: userId,
+                date: { $gte: periodStart, $lte: periodEnd },
+              },
+            },
+            { $group: { _id: null, total: { $sum: "$amount" } } },
+          ]);
+
+          const alreadySpent = spentResult[0]?.total || 0;
+          const projectedSpend = alreadySpent + amountDelta;
+
+          if (projectedSpend > budget.amount) {
+            const overBy = (projectedSpend - budget.amount).toFixed(2);
+            const remaining = Math.max(0, budget.amount - alreadySpent).toFixed(2);
+            return res.status(422).json({
+              success: false,
+              message: `This update exceeds your "${budget.name}" ${budget.period} budget by $${overBy}. Remaining budget: $${remaining}.`,
+              budget: {
+                name: budget.name,
+                period: budget.period,
+                limit: budget.amount,
+                spent: alreadySpent,
+                remaining: Number(remaining),
+                overBy: Number(overBy),
+              },
+            });
+          }
+        }
+      }
+    }
+
     await expense.save();
+
+    const { createdAt, updatedAt, __v, ...expenseData } = (expense as any).toObject();
+
     return res.status(200).json({
       success: true,
       message: "Expense updated successfully.",
-      expense,
+      expense: expenseData,
     });
   } catch (error) {
     console.error("Update expense error:", error);
@@ -144,8 +253,12 @@ export const getExpenses = async (req: Request, res: Response) => {
       });
     }
 
-    const { search, category, startDate, endDate, minAmount, maxAmount } =
+    const { search, category, startDate, endDate, minAmount, maxAmount, page, limit } =
       req.query;
+
+    const pageNumber = Math.max(1, parseInt(page as string) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(limit as string) || 10));
+    const skip = (pageNumber - 1) * pageSize;
 
     const filter: any = { user: req.userId };
 
@@ -174,14 +287,29 @@ export const getExpenses = async (req: Request, res: Response) => {
       }
     }
 
-    const expenses = await Expense.find(filter)
-      .populate("category", "name")
-      .sort({ date: -1 });
+    const [expenses, total] = await Promise.all([
+      Expense.find(filter, { createdAt: 0, updatedAt: 0, __v: 0 })
+        .populate("category", "name")
+        .sort({ date: -1 })
+        .skip(skip)
+        .limit(pageSize),
+      Expense.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(total / pageSize);
 
     return res.status(200).json({
       success: true,
       message: `Fetched ${expenses.length} expenses successfully.`,
       expenses,
+      pagination: {
+        total,
+        page: pageNumber,
+        limit: pageSize,
+        totalPages,
+        hasNextPage: pageNumber < totalPages,
+        hasPrevPage: pageNumber > 1,
+      },
     });
   } catch (error) {
     console.error("Get expenses error:", error);
@@ -250,13 +378,11 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       999
     );
 
-  
     const totalResult = await Expense.aggregate([
       { $match: { user: userId } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
     const totalExpenses = totalResult[0]?.total || 0;
-
 
     const thisMonthResult = await Expense.aggregate([
       {
@@ -269,12 +395,13 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     ]);
     const thisMonthExpenses = thisMonthResult[0]?.total || 0;
 
-
     const userBudget = await Budget.findOne({ user: userId });
     const budgetLimit = userBudget ? userBudget.amount : 0;
     const remainingBudget = Math.max(0, budgetLimit - thisMonthExpenses);
-    const percentageUsed = budgetLimit > 0 ? Number(((thisMonthExpenses / budgetLimit) * 100).toFixed(2)) : 0;
-
+    const percentageUsed =
+      budgetLimit > 0
+        ? Number(((thisMonthExpenses / budgetLimit) * 100).toFixed(2))
+        : 0;
 
     const expensesByCategory = await Expense.aggregate([
       { $match: { user: userId } },
@@ -305,7 +432,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       { $sort: { totalAmount: -1 } },
     ]);
 
-    const recentExpenses = await Expense.find({ user: userId })
+    const recentExpenses = await Expense.find({ user: userId }, { createdAt: 0, updatedAt: 0, __v: 0 })
       .populate("category", "name")
       .sort({ date: -1 })
       .limit(5);

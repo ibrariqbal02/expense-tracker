@@ -29,7 +29,10 @@ const budgetSchema = new mongoose.Schema(
       trim: true,
     },
   },
-  { timestamps: true }
+  { timestamps: false }
 );
+
+// A user can have multiple budgets but not two with the same name + period
+budgetSchema.index({ user: 1, name: 1, period: 1 }, { unique: true });
 
 export const Budget = mongoose.model("Budget", budgetSchema);

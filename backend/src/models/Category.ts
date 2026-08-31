@@ -15,13 +15,13 @@ const categorySchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: true,
+    timestamps: false,
   }
 );
 
 categorySchema.index(
   { user: 1, name: 1 },
-  { unique: true }
+
 );
 
 export const Category = mongoose.model("Category", categorySchema);

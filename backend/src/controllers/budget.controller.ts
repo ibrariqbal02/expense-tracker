@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Budget, BudgetPeriod } from "../models/budget";
+import { Budget, BudgetPeriod } from "../models/Budget";
 
 export const getBudgets = async (req: Request, res: Response) => {
   try {
@@ -7,11 +7,36 @@ export const getBudgets = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: "Unauthorized." });
     }
 
-    const budgets = await Budget.find({ user: req.userId }).sort({
-      createdAt: -1,
-    });
+    const { page, limit } = req.query;
 
-    return res.status(200).json({ success: true, budgets });
+    const pageNumber = Math.max(1, parseInt(page as string) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(limit as string) || 10));
+    const skip = (pageNumber - 1) * pageSize;
+
+    const filter = { user: req.userId };
+
+    const [budgets, total] = await Promise.all([
+      Budget.find(filter, { createdAt: 0, updatedAt: 0, __v: 0 })
+        .sort({ _id: -1 })
+        .skip(skip)
+        .limit(pageSize),
+      Budget.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(total / pageSize);
+
+    return res.status(200).json({
+      success: true,
+      budgets,
+      pagination: {
+        total,
+        page: pageNumber,
+        limit: pageSize,
+        totalPages,
+        hasNextPage: pageNumber < totalPages,
+        hasPrevPage: pageNumber > 1,
+      },
+    });
   } catch (error) {
     console.error("Get budgets error:", error);
     return res
@@ -54,11 +79,19 @@ export const createBudget = async (req: Request, res: Response) => {
       period,
     });
 
+    const { createdAt, updatedAt, __v, ...budgetData } = (budget as any).toObject();
+
     return res
       .status(201)
-      .json({ success: true, message: "Budget created successfully.", budget });
-  } catch (error) {
+      .json({ success: true, message: "Budget created successfully.", budget: budgetData });
+  } catch (error: any) {
     console.error("Create budget error:", error);
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: "A budget with this name and period already exists.",
+      });
+    }
     return res
       .status(500)
       .json({ success: false, message: "Internal Server Error." });
@@ -92,12 +125,10 @@ export const updateBudget = async (req: Request, res: Response) => {
 
     if (amount !== undefined) {
       if (Number(amount) < 0) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Budget amount cannot be negative.",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Budget amount cannot be negative.",
+        });
       }
       budget.amount = Number(amount);
     }
@@ -114,11 +145,19 @@ export const updateBudget = async (req: Request, res: Response) => {
 
     await budget.save();
 
+    const { createdAt, updatedAt, __v, ...budgetData } = (budget as any).toObject();
+
     return res
       .status(200)
-      .json({ success: true, message: "Budget updated successfully.", budget });
-  } catch (error) {
+      .json({ success: true, message: "Budget updated successfully.", budget: budgetData });
+  } catch (error: any) {
     console.error("Update budget error:", error);
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: "A budget with this name and period already exists.",
+      });
+    }
     return res
       .status(500)
       .json({ success: false, message: "Internal Server Error." });
