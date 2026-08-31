@@ -12,7 +12,10 @@ export default function Profile() {
   const [name, setName] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [showPasswordForm, setShowPasswordForm] = useState(false);
+
+  // Dialog open/close state
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+
   const [passwordData, setPasswordData] = useState({ currentPassword: "", newPassword: "" });
   const { mutate: updatePassword, isPending: isPasswordPending, error: passwordError, isSuccess: passwordSuccess } = useUpdatePassword();
   const navigate = useNavigate();
@@ -57,7 +60,42 @@ export default function Profile() {
     });
   };
 
-  if (isLoading) return <div className="p-8 text-center text-gray-500">Loading profile...</div>;
+  // Dialog band karne ka function — state reset bhi karta hai
+  const closeDialog = () => {
+    setShowPasswordDialog(false);
+    setPasswordData({ currentPassword: "", newPassword: "" });
+  };
+
+  if (isLoading)
+    return (
+      <div className="mx-auto max-w-xl">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm animate-pulse">
+          <div className="mb-6 h-8 w-40 rounded bg-gray-200" />
+
+          {/* Avatar Skeleton */}
+          <div className="flex items-center space-x-6 mb-6">
+            <div className="h-24 w-24 rounded-full bg-gray-200" />
+            <div className="h-9 w-32 rounded-lg bg-gray-200" />
+          </div>
+
+          {/* Email Skeleton */}
+          <div className="mb-4">
+            <div className="mb-1 h-4 w-28 rounded bg-gray-200" />
+            <div className="h-10 w-full rounded-lg bg-gray-200" />
+          </div>
+
+          {/* Name Skeleton */}
+          <div className="mb-4">
+            <div className="mb-1 h-4 w-20 rounded bg-gray-200" />
+            <div className="h-10 w-full rounded-lg bg-gray-200" />
+          </div>
+
+          {/* Button Skeleton */}
+          <div className="h-10 w-full rounded-lg bg-gray-200" />
+        </div>
+      </div>
+    );
+
   if (isError) return <div className="p-8 text-center text-red-500">Error loading profile details.</div>;
 
   return (
@@ -117,28 +155,69 @@ export default function Profile() {
           </button>
         </form>
 
-        {/* Change Password Toggle */}
+        {/* Change Password Button — Dialog open karta hai */}
         <div className="mt-6 border-t border-gray-100 pt-4">
           <button
             type="button"
-            onClick={() => setShowPasswordForm((v) => !v)}
+            onClick={() => setShowPasswordDialog(true)}
             className="text-sm font-medium text-blue-600 hover:underline"
           >
-            {showPasswordForm ? "Cancel" : "Change Password"}
+            Change Password
           </button>
+        </div>
+      </div>
 
-          {showPasswordForm && (
-            <div className="mt-4 space-y-4">
-              {passwordSuccess && (
-                <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700 border border-green-200">
-                  Password updated! Redirecting to login...
-                </div>
-              )}
-              {passwordError && (
-                <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-200">
-                  {(passwordError as any)?.response?.data?.message || "Failed to update password."}
-                </div>
-              )}
+      {/* ===================== PASSWORD DIALOG BOX ===================== */}
+      {showPasswordDialog && (
+        /*
+          Yeh outer div "Backdrop" hai — poora screen cover karta hai
+          ek dark transparent layer se, taake focus dialog par rahe.
+          "fixed inset-0" matlab: top-0, right-0, bottom-0, left-0 — poora screen
+          "z-50" matlab: sabse upar layer mein render hoga
+          "flex items-center justify-center" dialog ko screen ke beech mein rakhta hai
+        */
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={closeDialog} // Backdrop click se dialog band ho jata hai
+        >
+          {/*
+            Yeh inner div actual Dialog Box hai.
+            "e.stopPropagation()" isliye lagaya ke agar dialog ke andar click
+            karein to backdrop ka onClick fire na ho — warna dialog band ho jata
+          */}
+          <div
+            className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Dialog Header */}
+            <div className="mb-5 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-800">Change Password</h3>
+              {/* X button — dialog band karta hai */}
+              <button
+                type="button"
+                onClick={closeDialog}
+                className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Success Message */}
+            {passwordSuccess && (
+              <div className="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-700 border border-green-200">
+                Password updated! Redirecting to login...
+              </div>
+            )}
+
+            {/* Error Message */}
+            {passwordError && (
+              <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-200">
+                {(passwordError as any)?.response?.data?.message || "Failed to update password."}
+              </div>
+            )}
+
+            {/* Dialog Form */}
+            <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">Current Password</label>
                 <input
@@ -159,18 +238,30 @@ export default function Profile() {
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
                 />
               </div>
-              <button
-                type="button"
-                disabled={isPasswordPending}
-                onClick={() => updatePassword(passwordData)}
-                className="w-full rounded-lg bg-gray-800 py-2.5 font-medium text-white transition hover:bg-gray-900 disabled:bg-gray-400"
-              >
-                {isPasswordPending ? "Updating..." : "Update Password"}
-              </button>
+
+              {/* Dialog Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={closeDialog}
+                  className="flex-1 rounded-lg border border-gray-300 py-2.5 font-medium text-gray-700 transition hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isPasswordPending}
+                  onClick={() => updatePassword(passwordData)}
+                  className="flex-1 rounded-lg bg-gray-800 py-2.5 font-medium text-white transition hover:bg-gray-900 disabled:bg-gray-400"
+                >
+                  {isPasswordPending ? "Updating..." : "Update Password"}
+                </button>
+              </div>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
+      {/* =================== END DIALOG BOX =================== */}
     </div>
   );
 }
