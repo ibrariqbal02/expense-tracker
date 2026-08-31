@@ -11,7 +11,6 @@ export type ExpenseItem = {
   date: string;
   description?: string;
   receiptUrl?: string;
-  createdAt?: string;
 };
 
 export type CreateExpensePayload = {
@@ -36,9 +35,30 @@ export type ExpenseFilters = {
   maxAmount?: string;
 };
 
-export const getExpenses = async (filters?: ExpenseFilters): Promise<ExpenseItem[]> => {
-  const response = await api.get("/expense", { params: filters });
-  return response.data.expenses;
+export type Pagination = {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
+
+export type PaginatedExpenses = {
+  expenses: ExpenseItem[];
+  pagination: Pagination;
+};
+
+export const getExpenses = async (
+  filters?: ExpenseFilters,
+  page = 1,
+  limit = 10
+): Promise<PaginatedExpenses> => {
+  const response = await api.get("/expense", { params: { ...filters, page, limit } });
+  return {
+    expenses: response.data.expenses,
+    pagination: response.data.pagination,
+  };
 };
 
 export const createExpense = async (data: CreateExpensePayload) => {

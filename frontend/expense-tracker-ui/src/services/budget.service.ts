@@ -1,4 +1,5 @@
 import api from "../api/axios";
+import type { Pagination } from "./expense.service";
 
 export type BudgetPeriod = "monthly" | "yearly";
 
@@ -7,8 +8,6 @@ export type BudgetItem = {
   name: string;
   amount: number;
   period: BudgetPeriod;
-  createdAt?: string;
-  updatedAt?: string;
 };
 
 export type CreateBudgetPayload = {
@@ -21,9 +20,17 @@ export type UpdateBudgetPayload = Partial<CreateBudgetPayload> & {
   id: string;
 };
 
-export const getBudgets = async (): Promise<BudgetItem[]> => {
-  const response = await api.get("/budget");
-  return response.data.budgets;
+export type PaginatedBudgets = {
+  budgets: BudgetItem[];
+  pagination: Pagination;
+};
+
+export const getBudgets = async (page = 1, limit = 10): Promise<PaginatedBudgets> => {
+  const response = await api.get("/budget", { params: { page, limit } });
+  return {
+    budgets: response.data.budgets,
+    pagination: response.data.pagination,
+  };
 };
 
 export const createBudget = async (data: CreateBudgetPayload): Promise<BudgetItem> => {

@@ -4,7 +4,8 @@ import { Link } from "react-router-dom";
 
 export default function DashboardOverview() {
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
-  const { data: budgets = [], isLoading: budgetsLoading } = useGetBudgets();
+  const { data: budgetsData, isLoading: budgetsLoading } = useGetBudgets(1, 100);
+  const budgets = budgetsData?.budgets ?? [];
 
   const isLoading = statsLoading || budgetsLoading;
 

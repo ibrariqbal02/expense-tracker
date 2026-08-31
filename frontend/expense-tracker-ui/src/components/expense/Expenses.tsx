@@ -4,6 +4,7 @@ import {
     useCreateExpense,
     useUpdateExpense,
     useDeleteExpense,
+    useGetDashboardStats,
 } from "../../hooks/useExpenses";
 import toast from "react-hot-toast";
 import { useGetCategories } from "../../hooks/useCategories";
@@ -24,15 +25,23 @@ export default function Expenses() {
     const [appliedFilters, setAppliedFilters] = useState<typeof emptyFilters | undefined>(undefined);
     const [currentPage, setCurrentPage] = useState(1);
 
-    const { data: expenses = [], isLoading } = useGetExpenses(
-        appliedFilters
-            ? Object.fromEntries(Object.entries(appliedFilters).filter(([, v]) => v !== ""))
-            : undefined
-    );
+    const activeFilters = appliedFilters
+        ? Object.fromEntries(Object.entries(appliedFilters).filter(([, v]) => v !== ""))
+        : undefined;
+
+    const { data, isLoading } = useGetExpenses(activeFilters, currentPage, PAGE_SIZE);
+    const expenses = data?.expenses ?? [];
+    const pagination = data?.pagination;
+
     const { mutate: createExpense, isPending: isCreating } = useCreateExpense();
     const { mutate: updateExpense, isPending: isUpdating } = useUpdateExpense();
     const { mutate: deleteExpense } = useDeleteExpense();
-    const { data: categories = [] } = useGetCategories();
+
+    const { data: stats } = useGetDashboardStats();
+
+    // Fetch all categories without pagination for the filter dropdown and form
+    const { data: categoriesData } = useGetCategories(1, 100);
+    const categories = categoriesData?.categories ?? [];
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -119,11 +128,18 @@ export default function Expenses() {
         }
     };
 
-    const totalExpense = expenses.reduce((acc, curr) => acc + curr.amount, 0);
+    const totalPages = pagination?.totalPages ?? 1;
+    const total = pagination?.total ?? 0;
+    const from = total === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+    const to = Math.min(currentPage * PAGE_SIZE, total);
 
-    const totalPages = Math.max(1, Math.ceil(expenses.length / PAGE_SIZE));
-    const safePage = Math.min(currentPage, totalPages);
-    const paginatedExpenses = expenses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+    // Budget status derived from dashboard stats
+    const monthlyBudget = stats?.budget ?? null;
+    const monthlyUsedPct = monthlyBudget && monthlyBudget.limit > 0
+        ? Math.min((monthlyBudget.used / monthlyBudget.limit) * 100, 100)
+        : 0;
+    const isOverMonthly = monthlyBudget && monthlyBudget.limit > 0 && monthlyBudget.used > monthlyBudget.limit;
+    const isNearMonthly = !isOverMonthly && monthlyUsedPct >= 80;
 
     return (
         <div className="space-y-6">
@@ -132,7 +148,7 @@ export default function Expenses() {
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800">Expenses</h2>
                     <p className="text-sm text-gray-500">
-                        Total Spent: <span className="font-semibold text-red-600">${totalExpense.toFixed(2)}</span>
+                        Total records: <span className="font-semibold text-gray-700">{total}</span>
                     </p>
                 </div>
                 <button
@@ -142,6 +158,54 @@ export default function Expenses() {
                     + Add Expense
                 </button>
             </div>
+
+            {/* Budget Status Banner */}
+            {monthlyBudget && monthlyBudget.limit > 0 && (
+                <div
+                    className={`rounded-xl border px-5 py-4 shadow-sm ${
+                        isOverMonthly
+                            ? "border-red-300 bg-red-50"
+                            : isNearMonthly
+                            ? "border-yellow-300 bg-yellow-50"
+                            : "border-green-300 bg-green-50"
+                    }`}
+                >
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            <span className="text-lg">
+                                {isOverMonthly ? "🚨" : isNearMonthly ? "⚠️" : "✅"}
+                            </span>
+                            <div>
+                                <p className={`text-sm font-semibold ${
+                                    isOverMonthly ? "text-red-700" : isNearMonthly ? "text-yellow-700" : "text-green-700"
+                                }`}>
+                                    {isOverMonthly
+                                        ? `Monthly budget exceeded by $${(monthlyBudget.used - monthlyBudget.limit).toFixed(2)}`
+                                        : isNearMonthly
+                                        ? `Approaching monthly budget limit (${monthlyUsedPct.toFixed(0)}% used)`
+                                        : `Monthly budget on track (${monthlyUsedPct.toFixed(0)}% used)`}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                    ${monthlyBudget.used.toFixed(2)} spent of ${monthlyBudget.limit.toFixed(2)} budget
+                                    {!isOverMonthly && ` · $${monthlyBudget.remaining.toFixed(2)} remaining`}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Progress bar */}
+                        <div className="sm:w-48 w-full">
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div
+                                    className={`h-2 rounded-full transition-all ${
+                                        isOverMonthly ? "bg-red-500" : isNearMonthly ? "bg-yellow-400" : "bg-green-500"
+                                    }`}
+                                    style={{ width: `${monthlyUsedPct}%` }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Filters */}
             <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -237,7 +301,7 @@ export default function Expenses() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
-                                {paginatedExpenses.map((expense) => (
+                                {expenses.map((expense) => (
                                     <tr key={expense._id} className="hover:bg-gray-50 transition">
                                         <td className="px-6 py-4 font-medium text-gray-900">{expense.title}</td>
                                         <td className="px-6 py-4 font-semibold text-red-600">${expense.amount.toFixed(2)}</td>
@@ -272,26 +336,25 @@ export default function Expenses() {
                 )}
 
                 {/* Pagination */}
-                {expenses.length > 0 && (
+                {total > 0 && (
                     <div className="flex flex-col gap-3 border-t border-gray-200 px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-sm text-gray-500">
-                            Showing {(safePage - 1) * PAGE_SIZE + 1}-{Math.min(safePage * PAGE_SIZE, expenses.length)} of{" "}
-                            {expenses.length}
+                            Showing {from}–{to} of {total}
                         </p>
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                                disabled={safePage === 1}
+                                disabled={!pagination?.hasPrevPage}
                                 className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition"
                             >
                                 Previous
                             </button>
                             <span className="text-sm text-gray-600">
-                                Page {safePage} of {totalPages}
+                                Page {currentPage} of {totalPages}
                             </span>
                             <button
                                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                                disabled={safePage === totalPages}
+                                disabled={!pagination?.hasNextPage}
                                 className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition"
                             >
                                 Next
