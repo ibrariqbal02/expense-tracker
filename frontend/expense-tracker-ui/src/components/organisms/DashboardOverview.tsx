@@ -1,6 +1,7 @@
 import { useGetDashboardStats } from "../../hooks/useExpenses";
 import { useGetBudgets } from "../../hooks/useBudgets";
 import { Link } from "react-router-dom";
+import { formatMoney } from "../../utils/formatMoney";
 
 export default function DashboardOverview() {
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
@@ -42,12 +43,12 @@ export default function DashboardOverview() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <p className="text-sm font-medium text-gray-500">Total Expenses</p>
-          <h3 className="text-3xl font-bold text-gray-800 mt-2">${totalExpenses.toFixed(2)}</h3>
+          <h3 className="text-3xl font-bold text-gray-800 mt-2">{formatMoney(totalExpenses)}</h3>
         </div>
 
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <p className="text-sm font-medium text-gray-500">Expenses This Month</p>
-          <h3 className="text-3xl font-bold text-blue-600 mt-2">${thisMonthExpenses.toFixed(2)}</h3>
+          <h3 className="text-3xl font-bold text-blue-600 mt-2">{formatMoney(thisMonthExpenses)}</h3>
         </div>
       </div>
 
@@ -78,7 +79,7 @@ export default function DashboardOverview() {
                 <div className="flex justify-between text-sm font-medium mb-1">
                   <span className="text-gray-700">Monthly Budget</span>
                   <span className={isOverBudget ? "text-red-600" : "text-gray-900"}>
-                    ${thisMonthExpenses.toFixed(2)} / ${totalMonthlyBudget.toFixed(2)}
+                    {formatMoney(thisMonthExpenses)} / {formatMoney(totalMonthlyBudget)}
                   </span>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-2.5">
@@ -91,8 +92,8 @@ export default function DashboardOverview() {
                 </div>
                 <p className={`text-xs mt-1 ${isOverBudget ? "text-red-500 font-medium" : "text-gray-400"}`}>
                   {isOverBudget
-                    ? `Over budget by $${Math.abs(monthlyRemaining).toFixed(2)}`
-                    : `$${monthlyRemaining.toFixed(2)} remaining`}
+                    ? `Over budget by ${formatMoney(Math.abs(monthlyRemaining))}`
+                    : `${formatMoney(monthlyRemaining)} remaining`}
                 </p>
               </div>
             )}
@@ -102,13 +103,13 @@ export default function DashboardOverview() {
               <div className="rounded-lg bg-blue-50 p-3">
                 <p className="text-xs text-blue-500 font-medium">Monthly Budget</p>
                 <p className="text-lg font-bold text-blue-700 mt-0.5">
-                  ${totalMonthlyBudget.toFixed(2)}
+                  {formatMoney(totalMonthlyBudget)}
                 </p>
               </div>
               <div className="rounded-lg bg-green-50 p-3">
                 <p className="text-xs text-green-500 font-medium">Yearly Budget</p>
                 <p className="text-lg font-bold text-green-700 mt-0.5">
-                  ${totalYearlyBudget.toFixed(2)}
+                  {formatMoney(totalYearlyBudget)}
                 </p>
               </div>
               <div className={`rounded-lg p-3 ${isOverBudget ? "bg-red-50" : "bg-gray-50"}`}>
@@ -116,7 +117,7 @@ export default function DashboardOverview() {
                   Monthly Remaining
                 </p>
                 <p className={`text-lg font-bold mt-0.5 ${isOverBudget ? "text-red-600" : "text-gray-700"}`}>
-                  {isOverBudget ? "-" : ""}${Math.abs(monthlyRemaining).toFixed(2)}
+                  {isOverBudget ? "-" : ""}{formatMoney(Math.abs(monthlyRemaining))}
                 </p>
               </div>
             </div>
@@ -141,7 +142,7 @@ export default function DashboardOverview() {
                     <div className="flex justify-between text-sm font-medium mb-1">
                       <span className="text-gray-700">{item.name}</span>
                       <span className="text-gray-900">
-                        ${item.totalAmount.toFixed(2)} ({percentage.toFixed(0)}%)
+                        {formatMoney(item.totalAmount)} ({percentage.toFixed(0)}%)
                       </span>
                     </div>
                     <div className="w-full bg-gray-100 rounded-full h-2.5">
@@ -174,7 +175,7 @@ export default function DashboardOverview() {
                     </p>
                   </div>
                   <span className="text-sm font-bold text-red-600">
-                    -${expense.amount.toFixed(2)}
+                    -{formatMoney(expense.amount)}
                   </span>
                 </div>
               ))}

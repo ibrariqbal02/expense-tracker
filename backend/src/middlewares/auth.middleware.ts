@@ -7,15 +7,15 @@ export const isAuthenticated = (
   next: NextFunction
 ) => {
   try {
-    const token = req.cookies?.accessToken;
+  const authHeader = req.headers.authorization;
 
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: "Authorization is required.",
-      });
-    }
-
+ if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  return res.status(401).json({
+    success: false,
+    message: "Authorization is required.",
+  });
+}
+const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(
       token,
       process.env.JWT_ACCESS_SECRET as string

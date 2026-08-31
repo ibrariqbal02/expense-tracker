@@ -10,7 +10,7 @@ export default function LogoutButton() {
   const handleLogout = () => {
     logout(undefined, {
       onSuccess: () => {
-        // Server clears cookie; navigate to login
+       
         navigate("/login");
       },
     });

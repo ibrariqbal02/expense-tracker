@@ -1,17 +1,28 @@
 import axios from "axios";
+import { refreshToken as refreshTokenService } from "../services/auth.services";
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || "/api";
 
 const api = axios.create({
   baseURL,
-  withCredentials: true,
+
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Tracks whether a token refresh is already in flight so concurrent
-// 401s don't each trigger their own refresh request.
+
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("accessToken");
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
 let isRefreshing = false;
 let pendingRequests: Array<(retry: boolean) => void> = [];
 
@@ -55,12 +66,11 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        await api.post("/auth/refresh-token");
+        // refreshToken service call karo — woh localStorage mein naya token save karega
+        await refreshTokenService();
         notifyPending(true);
         return api(originalRequest);
       } catch {
-        // Refresh failed — the refresh token is expired or revoked.
-        // Clear pending queue and redirect to login.
         notifyPending(false);
         window.location.href = "/login";
         return Promise.reject(error);

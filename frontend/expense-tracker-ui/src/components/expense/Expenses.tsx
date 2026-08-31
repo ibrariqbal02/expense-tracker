@@ -8,6 +8,7 @@ import {
 } from "../../hooks/useExpenses";
 import toast from "react-hot-toast";
 import { useGetCategories } from "../../hooks/useCategories";
+import { formatMoney } from "../../utils/formatMoney";
 
 const emptyFilters = {
     search: "",
@@ -180,14 +181,14 @@ export default function Expenses() {
                                     isOverMonthly ? "text-red-700" : isNearMonthly ? "text-yellow-700" : "text-green-700"
                                 }`}>
                                     {isOverMonthly
-                                        ? `Monthly budget exceeded by $${(monthlyBudget.used - monthlyBudget.limit).toFixed(2)}`
+                                        ? `Monthly budget exceeded by ${formatMoney(monthlyBudget.used - monthlyBudget.limit)}`
                                         : isNearMonthly
                                         ? `Approaching monthly budget limit (${monthlyUsedPct.toFixed(0)}% used)`
                                         : `Monthly budget on track (${monthlyUsedPct.toFixed(0)}% used)`}
                                 </p>
                                 <p className="text-xs text-gray-500 mt-0.5">
-                                    ${monthlyBudget.used.toFixed(2)} spent of ${monthlyBudget.limit.toFixed(2)} budget
-                                    {!isOverMonthly && ` · $${monthlyBudget.remaining.toFixed(2)} remaining`}
+                                    {formatMoney(monthlyBudget.used)} spent of {formatMoney(monthlyBudget.limit)} budget
+                                    {!isOverMonthly && ` · ${formatMoney(monthlyBudget.remaining)} remaining`}
                                 </p>
                             </div>
                         </div>
@@ -304,7 +305,7 @@ export default function Expenses() {
                                 {expenses.map((expense) => (
                                     <tr key={expense._id} className="hover:bg-gray-50 transition">
                                         <td className="px-6 py-4 font-medium text-gray-900">{expense.title}</td>
-                                        <td className="px-6 py-4 font-semibold text-red-600">${expense.amount.toFixed(2)}</td>
+                                        <td className="px-6 py-4 font-semibold text-red-600">{formatMoney(expense.amount)}</td>
                                         <td className="px-6 py-4">
                                             <span className="inline-block rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
                                                 {typeof expense.category === "object" && expense.category !== null

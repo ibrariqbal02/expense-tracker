@@ -7,6 +7,7 @@ import {
 } from "../../hooks/useBudgets";
 import type { BudgetPeriod } from "../../services/budget.service";
 import toast from "react-hot-toast";
+import { formatMoney } from "../../utils/formatMoney";
 
 const PAGE_SIZE = 10;
 
@@ -136,11 +137,11 @@ export default function Budget() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <p className="text-sm font-medium text-gray-500">Total Monthly Budgets</p>
-            <h3 className="text-3xl font-bold text-blue-600 mt-2">${totalMonthly.toFixed(2)}</h3>
+            <h3 className="text-3xl font-bold text-blue-600 mt-2">{formatMoney(totalMonthly)}</h3>
           </div>
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <p className="text-sm font-medium text-gray-500">Total Yearly Budgets</p>
-            <h3 className="text-3xl font-bold text-green-600 mt-2">${totalYearly.toFixed(2)}</h3>
+            <h3 className="text-3xl font-bold text-green-600 mt-2">{formatMoney(totalYearly)}</h3>
           </div>
         </div>
       )}
@@ -169,7 +170,7 @@ export default function Budget() {
                   <tr key={budget._id} className="hover:bg-gray-50 transition">
                     <td className="px-6 py-4 font-medium text-gray-900">{budget.name}</td>
                     <td className="px-6 py-4 font-semibold text-blue-600">
-                      ${budget.amount.toFixed(2)}
+                      {formatMoney(budget.amount)}
                     </td>
                     <td className="px-6 py-4">
                       <span
