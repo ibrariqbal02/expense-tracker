@@ -8,6 +8,8 @@ import {
 import type { BudgetPeriod } from "../../services/budget.service";
 import toast from "react-hot-toast";
 
+const PAGE_SIZE = 10;
+
 const emptyForm = {
   name: "",
   amount: "",
@@ -15,7 +17,12 @@ const emptyForm = {
 };
 
 export default function Budget() {
-  const { data: budgets = [], isLoading } = useGetBudgets();
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const { data, isLoading } = useGetBudgets(currentPage, PAGE_SIZE);
+  const budgets = data?.budgets ?? [];
+  const pagination = data?.pagination;
+
   const { mutate: createBudget, isPending: isCreating } = useCreateBudget();
   const { mutate: updateBudget, isPending: isUpdating } = useUpdateBudget();
   const { mutate: deleteBudget } = useDeleteBudget();
@@ -31,6 +38,11 @@ export default function Budget() {
   const totalYearly = budgets
     .filter((b) => b.period === "yearly")
     .reduce((acc, b) => acc + b.amount, 0);
+
+  const total = pagination?.total ?? 0;
+  const totalPages = pagination?.totalPages ?? 1;
+  const from = total === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const to = Math.min(currentPage * PAGE_SIZE, total);
 
   const handleOpenModal = (budget?: (typeof budgets)[0]) => {
     if (budget) {
@@ -106,9 +118,9 @@ export default function Budget() {
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Budgets</h2>
           <p className="text-sm text-gray-500 mt-1">
-            {budgets.length === 0
+            {total === 0
               ? "No budgets set yet."
-              : `${budgets.length} budget${budgets.length !== 1 ? "s" : ""} configured`}
+              : `${total} budget${total !== 1 ? "s" : ""} configured`}
           </p>
         </div>
         <button
@@ -149,7 +161,6 @@ export default function Budget() {
                   <th className="px-6 py-3">Name</th>
                   <th className="px-6 py-3">Amount</th>
                   <th className="px-6 py-3">Period</th>
-                  <th className="px-6 py-3">Created</th>
                   <th className="px-6 py-3 text-right">Actions</th>
                 </tr>
               </thead>
@@ -171,11 +182,6 @@ export default function Budget() {
                         {budget.period}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      {budget.createdAt
-                        ? new Date(budget.createdAt).toLocaleDateString()
-                        : "—"}
-                    </td>
                     <td className="px-6 py-4 text-right space-x-2">
                       <button
                         onClick={() => handleOpenModal(budget)}
@@ -196,6 +202,34 @@ export default function Budget() {
             </table>
           </div>
         )}
+
+        {/* Pagination */}
+        {total > 0 && (
+          <div className="flex flex-col gap-3 border-t border-gray-200 px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-gray-500">
+              Showing {from}–{to} of {total}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={!pagination?.hasPrevPage}
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-gray-600">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={!pagination?.hasNextPage}
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Add / Edit Modal */}
@@ -207,7 +241,6 @@ export default function Budget() {
             </h3>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Name */}
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">
                   Budget Name
@@ -222,7 +255,6 @@ export default function Budget() {
                 />
               </div>
 
-              {/* Amount */}
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">
                   Amount ($)
@@ -239,7 +271,6 @@ export default function Budget() {
                 />
               </div>
 
-              {/* Period */}
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">
                   Period
@@ -257,7 +288,6 @@ export default function Budget() {
                 </select>
               </div>
 
-              {/* Actions */}
               <div className="flex gap-3 pt-2">
                 <button
                   type="submit"
