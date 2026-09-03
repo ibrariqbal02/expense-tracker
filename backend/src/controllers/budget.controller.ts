@@ -72,6 +72,21 @@ export const createBudget = async (req: Request, res: Response) => {
       });
     }
 
+    // One-per-period rule: each user may only have one monthly and one yearly budget
+    const existing = await Budget.findOne({ user: req.userId, period });
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: `You already have a ${period} budget ("${existing.name}"). Please update or delete it before creating a new one.`,
+        existingBudget: {
+          _id: existing._id,
+          name: existing.name,
+          amount: existing.amount,
+          period: existing.period,
+        },
+      });
+    }
+
     const budget = await Budget.create({
       user: req.userId,
       name: name.trim(),

@@ -76,7 +76,28 @@ export const deleteExpense = async (id: string) => {
   return response.data;
 };
 
-export const getDashboardStats = async () => {
+export type BudgetPeriodStats = {
+  limit: number;
+  spent: number;
+  remaining: number;
+  percentageUsed: number;
+  isExceeded: boolean;
+  overBy: number;
+};
+
+export type DashboardStats = {
+  totalExpenses: number;
+  thisMonthExpenses: number;
+  thisYearExpenses: number;
+  monthly: BudgetPeriodStats;
+  yearly: BudgetPeriodStats;
+  /** @deprecated use monthly instead */
+  budget: { limit: number; used: number; remaining: number; percentageUsed: number };
+  expensesByCategory: { _id: string; name: string; totalAmount: number; count: number }[];
+  recentExpenses: ExpenseItem[];
+};
+
+export const getDashboardStats = async (): Promise<DashboardStats> => {
   const response = await api.get("/expense/dashboard");
   return response.data.data;
 };
