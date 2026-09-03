@@ -395,13 +395,29 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     ]);
     const thisMonthExpenses = thisMonthResult[0]?.total || 0;
 
-    const userBudget = await Budget.findOne({ user: userId });
-    const budgetLimit = userBudget ? userBudget.amount : 0;
-    const remainingBudget = Math.max(0, budgetLimit - thisMonthExpenses);
-    const percentageUsed =
-      budgetLimit > 0
-        ? Number(((thisMonthExpenses / budgetLimit) * 100).toFixed(2))
-        : 0;
+    // Yearly spend
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    const thisYearResult = await Expense.aggregate([
+      { $match: { user: userId, date: { $gte: startOfYear, $lte: endOfYear } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+    const thisYearExpenses = thisYearResult[0]?.total || 0;
+
+    // Pull the single monthly and single yearly budget for this user
+    const allBudgets = await Budget.find({ user: userId });
+    const monthlyBudgetDoc = allBudgets.find((b) => b.period === "monthly") || null;
+    const yearlyBudgetDoc  = allBudgets.find((b) => b.period === "yearly")  || null;
+
+    const monthlyLimit     = monthlyBudgetDoc ? monthlyBudgetDoc.amount : 0;
+    const monthlySpent     = thisMonthExpenses;
+    const monthlyRemaining = Math.max(0, monthlyLimit - monthlySpent);
+    const monthlyPct       = monthlyLimit > 0 ? Number(((monthlySpent / monthlyLimit) * 100).toFixed(2)) : 0;
+
+    const yearlyLimit      = yearlyBudgetDoc ? yearlyBudgetDoc.amount : 0;
+    const yearlySpent      = thisYearExpenses;
+    const yearlyRemaining  = Math.max(0, yearlyLimit - yearlySpent);
+    const yearlyPct        = yearlyLimit > 0 ? Number(((yearlySpent / yearlyLimit) * 100).toFixed(2)) : 0;
 
     const expensesByCategory = await Expense.aggregate([
       { $match: { user: userId } },
@@ -442,11 +458,29 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       data: {
         totalExpenses,
         thisMonthExpenses,
+        thisYearExpenses,
+        monthly: {
+          limit: monthlyLimit,
+          spent: monthlySpent,
+          remaining: monthlyRemaining,
+          percentageUsed: monthlyPct,
+          isExceeded: monthlyLimit > 0 && monthlySpent > monthlyLimit,
+          overBy: monthlyLimit > 0 ? Math.max(0, monthlySpent - monthlyLimit) : 0,
+        },
+        yearly: {
+          limit: yearlyLimit,
+          spent: yearlySpent,
+          remaining: yearlyRemaining,
+          percentageUsed: yearlyPct,
+          isExceeded: yearlyLimit > 0 && yearlySpent > yearlyLimit,
+          overBy: yearlyLimit > 0 ? Math.max(0, yearlySpent - yearlyLimit) : 0,
+        },
+        // legacy field kept for backward compat
         budget: {
-          limit: budgetLimit,
-          used: thisMonthExpenses,
-          remaining: remainingBudget,
-          percentageUsed,
+          limit: monthlyLimit,
+          used: monthlySpent,
+          remaining: monthlyRemaining,
+          percentageUsed: monthlyPct,
         },
         expensesByCategory,
         recentExpenses,

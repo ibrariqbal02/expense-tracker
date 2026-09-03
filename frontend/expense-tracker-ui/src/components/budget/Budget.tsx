@@ -8,6 +8,8 @@ import {
 import type { BudgetPeriod } from "../../services/budget.service";
 import toast from "react-hot-toast";
 import { formatMoney } from "../../utils/formatMoney";
+import { Pencil, Trash2, X, AlertTriangle, Plus } from "lucide-react";
+import { useGetDashboardStats } from "../../hooks/useExpenses";
 
 const PAGE_SIZE = 10;
 
@@ -19,10 +21,17 @@ const emptyForm = {
 
 export default function Budget() {
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const { data, isLoading } = useGetBudgets(currentPage, PAGE_SIZE);
   const budgets = data?.budgets ?? [];
   const pagination = data?.pagination;
+
+  // Pull live spend data so we can show remaining per budget
+  const { data: stats } = useGetDashboardStats();
+  const emptyPeriod = { limit: 0, spent: 0, remaining: 0, percentageUsed: 0, isExceeded: false, overBy: 0 };
+  const monthlyStats = stats?.monthly ?? emptyPeriod;
+  const yearlyStats  = stats?.yearly  ?? emptyPeriod;
 
   const { mutate: createBudget, isPending: isCreating } = useCreateBudget();
   const { mutate: updateBudget, isPending: isUpdating } = useUpdateBudget();
@@ -31,6 +40,11 @@ export default function Budget() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState(emptyForm);
+
+  // Does the selected period already have a budget (when creating new)?
+  const existingForPeriod = !editingId
+    ? budgets.find((b) => b.period === formData.period)
+    : null;
 
   const totalMonthly = budgets
     .filter((b) => b.period === "monthly")
@@ -48,11 +62,7 @@ export default function Budget() {
   const handleOpenModal = (budget?: (typeof budgets)[0]) => {
     if (budget) {
       setEditingId(budget._id);
-      setFormData({
-        name: budget.name,
-        amount: budget.amount.toString(),
-        period: budget.period,
-      });
+      setFormData({ name: budget.name, amount: budget.amount.toString(), period: budget.period });
     } else {
       setEditingId(null);
       setFormData(emptyForm);
@@ -68,7 +78,6 @@ export default function Budget() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     const payload = {
       name: formData.name.trim(),
       amount: Number(formData.amount),
@@ -79,126 +88,195 @@ export default function Budget() {
       updateBudget(
         { id: editingId, ...payload },
         {
-          onSuccess: () => {
-            toast.success("Budget updated!");
-            handleCloseModal();
-          },
-          onError: (err: any) => {
-            toast.error(err?.response?.data?.message || "Failed to update budget.");
-          },
+          onSuccess: () => { toast.success("Budget updated!"); handleCloseModal(); },
+          onError: (err: any) => toast.error(err?.response?.data?.message || "Failed to update budget."),
         }
       );
     } else {
       createBudget(payload, {
-        onSuccess: () => {
-          toast.success("Budget created!");
-          handleCloseModal();
-        },
-        onError: (err: any) => {
-          toast.error(err?.response?.data?.message || "Failed to create budget.");
-        },
+        onSuccess: () => { toast.success("Budget created!"); handleCloseModal(); },
+        onError: (err: any) => toast.error(err?.response?.data?.message || "Failed to create budget."),
       });
     }
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this budget?")) {
-      deleteBudget(id, {
-        onSuccess: () => toast.success("Budget deleted."),
-        onError: () => toast.error("Failed to delete budget."),
-      });
-    }
+    deleteBudget(id, {
+      onSuccess: () => { toast.success("Budget deleted."); setDeleteConfirmId(null); },
+      onError: () => toast.error("Failed to delete budget."),
+    });
   };
 
   const isSaving = isCreating || isUpdating;
 
+  // Per-budget spend info for the table
+  const spendForBudget = (b: (typeof budgets)[0]) => {
+    const s = b.period === "monthly" ? monthlyStats : yearlyStats;
+    // Only show if this is the active (matching) budget
+    if (s.limit === b.amount) return s;
+    return null;
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Header & Summary */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="space-y-5">
+
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white px-6 py-5 shadow-sm">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Budgets</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            {total === 0
-              ? "No budgets set yet."
-              : `${total} budget${total !== 1 ? "s" : ""} configured`}
+          <h2 className="text-xl font-bold text-gray-900">Budgets</h2>
+          <p className="text-sm text-gray-400 mt-0.5">
+            {total === 0 ? "No budgets set yet" : `${total} budget${total !== 1 ? "s" : ""} configured`}
           </p>
         </div>
         <button
           onClick={() => handleOpenModal()}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 active:scale-95 transition-all"
         >
-          + Add Budget
+          <Plus size={16} /> Add Budget
         </button>
       </div>
 
-      {/* Summary Cards */}
+      {/* ── Summary Cards ── */}
       {budgets.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Total Monthly Budgets</p>
-            <h3 className="text-3xl font-bold text-blue-600 mt-2">{formatMoney(totalMonthly)}</h3>
+          {/* Monthly summary */}
+          <div className={`rounded-2xl border p-5 shadow-sm ${
+            totalMonthly > 0 && monthlyStats.isExceeded
+              ? "border-rose-200 bg-rose-50"
+              : totalMonthly > 0 && monthlyStats.percentageUsed >= 80
+              ? "border-amber-200 bg-amber-50"
+              : "border-gray-200 bg-white"
+          }`}>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Monthly Budget</p>
+            <h3 className="text-2xl font-bold text-blue-600 mt-1">{formatMoney(totalMonthly)}</h3>
+            {totalMonthly > 0 && (
+              <>
+                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                  <div
+                    className={`h-1.5 rounded-full transition-all ${
+                      monthlyStats.isExceeded ? "bg-rose-500" : monthlyStats.percentageUsed >= 80 ? "bg-amber-400" : "bg-blue-500"
+                    }`}
+                    style={{ width: `${Math.min(monthlyStats.percentageUsed, 100)}%` }}
+                  />
+                </div>
+                <p className={`text-xs mt-1 ${monthlyStats.isExceeded ? "text-rose-600 font-semibold" : "text-gray-400"}`}>
+                  {monthlyStats.isExceeded
+                    ? `Over by ${formatMoney(monthlyStats.overBy)}`
+                    : `${formatMoney(monthlyStats.remaining)} remaining · ${monthlyStats.percentageUsed.toFixed(0)}% used`}
+                </p>
+              </>
+            )}
           </div>
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <p className="text-sm font-medium text-gray-500">Total Yearly Budgets</p>
-            <h3 className="text-3xl font-bold text-green-600 mt-2">{formatMoney(totalYearly)}</h3>
+
+          {/* Yearly summary */}
+          <div className={`rounded-2xl border p-5 shadow-sm ${
+            totalYearly > 0 && yearlyStats.isExceeded
+              ? "border-rose-200 bg-rose-50"
+              : totalYearly > 0 && yearlyStats.percentageUsed >= 80
+              ? "border-amber-200 bg-amber-50"
+              : "border-gray-200 bg-white"
+          }`}>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Yearly Budget</p>
+            <h3 className="text-2xl font-bold text-emerald-600 mt-1">{formatMoney(totalYearly)}</h3>
+            {totalYearly > 0 && (
+              <>
+                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                  <div
+                    className={`h-1.5 rounded-full transition-all ${
+                      yearlyStats.isExceeded ? "bg-rose-500" : yearlyStats.percentageUsed >= 80 ? "bg-amber-400" : "bg-emerald-500"
+                    }`}
+                    style={{ width: `${Math.min(yearlyStats.percentageUsed, 100)}%` }}
+                  />
+                </div>
+                <p className={`text-xs mt-1 ${yearlyStats.isExceeded ? "text-rose-600 font-semibold" : "text-gray-400"}`}>
+                  {yearlyStats.isExceeded
+                    ? `Over by ${formatMoney(yearlyStats.overBy)}`
+                    : `${formatMoney(yearlyStats.remaining)} remaining · ${yearlyStats.percentageUsed.toFixed(0)}% used`}
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}
 
-      {/* Budget List */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      {/* ── Budget Table ── */}
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-gray-500">Loading budgets...</div>
+          <div className="p-10 text-center text-gray-400 text-sm">Loading budgets…</div>
         ) : budgets.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            No budgets yet. Click <span className="font-medium text-blue-600">+ Add Budget</span> to get started.
+          <div className="p-10 text-center text-gray-400 text-sm">
+            No budgets yet. Click <span className="font-semibold text-blue-600">Add Budget</span> to get started.
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-600">
-              <thead className="bg-gray-50 text-xs uppercase text-gray-500 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3">Name</th>
-                  <th className="px-6 py-3">Amount</th>
-                  <th className="px-6 py-3">Period</th>
-                  <th className="px-6 py-3 text-right">Actions</th>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/80">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">Name</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">Limit</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">Period</th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">Spent / Remaining</th>
+                  <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-400">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
-                {budgets.map((budget) => (
-                  <tr key={budget._id} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 font-medium text-gray-900">{budget.name}</td>
-                    <td className="px-6 py-4 font-semibold text-blue-600">
-                      {formatMoney(budget.amount)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-                          budget.period === "monthly"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-green-100 text-green-700"
-                        }`}
-                      >
-                        {budget.period}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right space-x-2">
-                      <button
-                        onClick={() => handleOpenModal(budget)}
-                        className="text-blue-600 hover:underline font-medium"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(budget._id)}
-                        className="text-red-600 hover:underline font-medium"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+              <tbody>
+                {budgets.map((budget, idx) => {
+                  const spend = spendForBudget(budget);
+                  return (
+                    <tr
+                      key={budget._id}
+                      className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${idx % 2 !== 0 ? "bg-gray-50/40" : ""}`}
+                    >
+                      <td className="px-5 py-4 font-semibold text-gray-800">{budget.name}</td>
+                      <td className="px-5 py-4 font-bold text-blue-600 tabular-nums">{formatMoney(budget.amount)}</td>
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
+                          budget.period === "monthly" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"
+                        }`}>
+                          {budget.period}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        {spend ? (
+                          <div className="space-y-1 min-w-[140px]">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-500">{formatMoney(spend.spent)} spent</span>
+                              <span className={spend.isExceeded ? "text-rose-600 font-semibold" : "text-gray-700"}>
+                                {spend.isExceeded ? `-${formatMoney(spend.overBy)}` : `${formatMoney(spend.remaining)} left`}
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                              <div
+                                className={`h-1.5 rounded-full ${spend.isExceeded ? "bg-rose-500" : spend.percentageUsed >= 80 ? "bg-amber-400" : "bg-emerald-500"}`}
+                                style={{ width: `${Math.min(spend.percentageUsed, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-300 text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => handleOpenModal(budget)}
+                            title="Edit"
+                            className="inline-flex items-center justify-center rounded-lg p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirmId(budget._id)}
+                            title="Delete"
+                            className="inline-flex items-center justify-center rounded-lg p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -206,25 +284,24 @@ export default function Budget() {
 
         {/* Pagination */}
         {total > 0 && (
-          <div className="flex flex-col gap-3 border-t border-gray-200 px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-gray-500">
-              Showing {from}–{to} of {total}
+          <div className="flex flex-col gap-3 border-t border-gray-100 px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-gray-400">
+              Showing <span className="font-semibold text-gray-600">{from}–{to}</span> of{" "}
+              <span className="font-semibold text-gray-600">{total}</span>
             </p>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={!pagination?.hasPrevPage}
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition"
+                className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
               >
                 Previous
               </button>
-              <span className="text-sm text-gray-600">
-                Page {currentPage} of {totalPages}
-              </span>
+              <span className="text-xs text-gray-500">Page {currentPage} of {totalPages}</span>
               <button
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={!pagination?.hasNextPage}
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition"
+                className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
               >
                 Next
               </button>
@@ -233,79 +310,121 @@ export default function Budget() {
         )}
       </div>
 
-      {/* Add / Edit Modal */}
+      {/* ── Add / Edit Modal ── */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg border border-gray-200">
-            <h3 className="text-xl font-bold text-gray-800 mb-5">
-              {editingId ? "Edit Budget" : "Add New Budget"}
-            </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-xl border border-gray-100">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900">
+                {editingId ? "Edit Budget" : "New Budget"}
+              </h3>
+              <button
+                onClick={handleCloseModal}
+                className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+
+              {/* Period conflict warning */}
+              {existingForPeriod && (
+                <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <AlertTriangle size={15} className="text-amber-500 mt-0.5 shrink-0" />
+                  <p className="text-xs text-amber-700">
+                    You already have a <span className="font-semibold">{formData.period}</span> budget
+                    called <span className="font-semibold">"{existingForPeriod.name}"</span> ({formatMoney(existingForPeriod.amount)}).
+                    Only one per period is allowed. Edit or delete the existing one instead.
+                  </p>
+                </div>
+              )}
+
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Budget Name
-                </label>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">Budget Name</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Groceries, Rent, Entertainment..."
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  placeholder="e.g. Monthly Spending, Annual Budget…"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none transition"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Amount ($)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  required
-                  placeholder="0.00"
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">Amount ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    required
+                    placeholder="0.00"
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none transition"
+                    value={formData.amount}
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">Period</label>
+                  <select
+                    required
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:border-blue-400 focus:bg-white focus:outline-none transition"
+                    value={formData.period}
+                    onChange={(e) => setFormData({ ...formData, period: e.target.value as BudgetPeriod })}
+                    disabled={!!editingId} // can't change period on edit
+                  >
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Period
-                </label>
-                <select
-                  required
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none bg-white"
-                  value={formData.period}
-                  onChange={(e) =>
-                    setFormData({ ...formData, period: e.target.value as BudgetPeriod })
-                  }
-                >
-                  <option value="monthly">Monthly</option>
-                  <option value="yearly">Yearly</option>
-                </select>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-60"
-                >
-                  {isSaving ? "Saving..." : editingId ? "Update Budget" : "Create Budget"}
-                </button>
+              <div className="flex justify-end gap-2.5 pt-1">
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                  className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
                 >
                   Cancel
                 </button>
+                <button
+                  type="submit"
+                  disabled={isSaving || !!existingForPeriod}
+                  className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition active:scale-95"
+                >
+                  {isSaving ? "Saving…" : editingId ? "Update" : "Create"}
+                </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete Confirm Modal ── */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl border border-gray-100 p-6">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-rose-100 mx-auto mb-4">
+              <Trash2 size={22} className="text-rose-600" />
+            </div>
+            <h3 className="text-center text-base font-bold text-gray-900 mb-1">Delete budget?</h3>
+            <p className="text-center text-sm text-gray-500 mb-6">Expense limits for this period will no longer be enforced.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirmId)}
+                className="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 transition active:scale-95"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -17,6 +17,7 @@ export const useCreateExpense = () => {
     mutationFn: expenseService.createExpense,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
     },
   });
 };
@@ -28,6 +29,7 @@ export const useUpdateExpense = () => {
     mutationFn: expenseService.updateExpense,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
     },
   });
 };
@@ -39,6 +41,7 @@ export const useDeleteExpense = () => {
     mutationFn: expenseService.deleteExpense,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
     },
   });
 };
